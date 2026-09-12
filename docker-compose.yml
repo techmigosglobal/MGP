@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ${MGP_ENV_FILE:-.env}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  directus:
+    image: directus/directus:11.5.1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ${MGP_ENV_FILE:-.env}
+    environment:
+      KEY: mgp-directus
+      SECRET: ${DIRECTUS_SECRET}
+      PUBLIC_URL: ${PUBLIC_URL}/api
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
+      CORS_ENABLED: "false"
+      REFRESH_TOKEN_COOKIE_SECURE: "false"
+      REFRESH_TOKEN_COOKIE_SAME_SITE: lax
+      EXTENSIONS_AUTO_RELOAD: "true"
+    volumes:
+      - ./extensions:/directus/extensions:ro
+      - directus_uploads:/directus/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8055/server/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  bootstrap:
+    image: node:22-alpine
+    depends_on:
+      directus:
+        condition: service_healthy
+    env_file: ${MGP_ENV_FILE:-.env}
+    environment:
+      DIRECTUS_URL: http://directus:8055
+    volumes:
+      - ./bootstrap:/bootstrap:ro
+    command: ["node", "/bootstrap/bootstrap.mjs"]
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: mgp-web:local
+    restart: unless-stopped
+    depends_on:
+      directus:
+        condition: service_healthy
+    ports:
+      - "${MGP_WEB_PORT:-8080}:80"
+
+volumes:
+  postgres_data:
+  directus_uploads:
