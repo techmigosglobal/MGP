@@ -15,6 +15,6 @@ func (s OrganizationStore) Get(ctx context.Context) (Organization, error) {
 }
 
 func (s OrganizationStore) Update(ctx context.Context, organization Organization) error {
-	_, err := s.DB.ExecContext(ctx, `UPDATE system_settings SET value=jsonb_build_object('name',$1,'address',$2,'defaultDirectorate',$3,'defaultProject',$4),updated_at=now() WHERE key='organization'`, organization.Name, organization.Address, organization.DefaultDirectorate, organization.DefaultProject)
+	_, err := s.DB.ExecContext(ctx, `UPDATE system_settings SET value=jsonb_build_object('name',$1::text,'address',$2::text,'defaultDirectorate',$3::text,'defaultProject',$4::text),updated_at=now() WHERE key='organization'`, organization.Name, organization.Address, organization.DefaultDirectorate, organization.DefaultProject)
 	return err
 }

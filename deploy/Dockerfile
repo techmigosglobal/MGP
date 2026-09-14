@@ -11,7 +11,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . ./
 COPY --from=assets /src/web/static/ ./web/static/
-RUN go run github.com/a-h/templ/cmd/templ@v0.3.1020 generate
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/mgp-server ./cmd/mgp-server
 
 FROM alpine:3.22

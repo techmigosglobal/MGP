@@ -29,7 +29,7 @@ templ PassTable(rows []view.PassRow) {
   } else {
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Pass no.</th><th>Date</th><th>Consignee</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>
       for _, row := range rows {
-        <tr><td><a class="pass-link" href={ templ.URL("/gate-passes/" + row.PassNo) }>{ row.PassNo }</a></td><td>{ row.PassDate }</td><td>{ row.Consignee }</td><td>{ row.PassType }</td><td><span class="status-badge">{ row.Status }</span></td><td><a class="button ghost small" href={ templ.URL("/gate-passes/" + row.PassNo) }>Open</a></td></tr>
+        <tr><td><a class="pass-link" href={ templ.URL("/gate-passes/" + row.ID) }>{ row.PassNo }</a></td><td>{ row.PassDate }</td><td>{ row.Consignee }</td><td>{ row.PassType }</td><td><span class="status-badge">{ row.Status }</span></td><td><a class="button ghost small" href={ templ.URL("/gate-passes/" + row.ID) }>Open</a></td></tr>
       }
     </tbody></table></div>
   }

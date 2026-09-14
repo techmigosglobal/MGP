@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -45,7 +46,11 @@ type Server struct {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(web.Static))))
+	staticFS, err := fs.Sub(web.Static, "static")
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -65,14 +70,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /gate-passes", s.gatePasses)
 	mux.HandleFunc("GET /gate-passes/new", s.newGatePass)
 	mux.HandleFunc("POST /gate-passes", s.createGatePass)
-	mux.HandleFunc("PATCH /gate-passes/{passNo}", s.updateGatePass)
-	mux.HandleFunc("GET /gate-passes/{passNo}", s.gatePassDetail)
-	mux.HandleFunc("GET /gate-passes/{passNo}/pdf", s.passPDF)
-	mux.HandleFunc("POST /gate-passes/{passNo}/submit", s.submitGatePass)
-	mux.HandleFunc("POST /gate-passes/{passNo}/approve", s.approveGatePass)
-	mux.HandleFunc("POST /gate-passes/{passNo}/reject", s.rejectGatePass)
-	mux.HandleFunc("POST /gate-passes/{passNo}/pass-out", s.passOutGatePass)
-	mux.HandleFunc("POST /gate-passes/{passNo}/return", s.returnGatePass)
+	mux.HandleFunc("PATCH /gate-passes/{id}", s.updateGatePass)
+	mux.HandleFunc("GET /gate-passes/{id}", s.gatePassDetail)
+	mux.HandleFunc("GET /gate-passes/{id}/pdf", s.passPDF)
+	mux.HandleFunc("POST /gate-passes/{id}/submit", s.submitGatePass)
+	mux.HandleFunc("POST /gate-passes/{id}/approve", s.approveGatePass)
+	mux.HandleFunc("POST /gate-passes/{id}/reject", s.rejectGatePass)
+	mux.HandleFunc("POST /gate-passes/{id}/pass-out", s.passOutGatePass)
+	mux.HandleFunc("POST /gate-passes/{id}/return", s.returnGatePass)
 	mux.HandleFunc("GET /users", s.users)
 	mux.HandleFunc("POST /users", s.createUser)
 	mux.HandleFunc("POST /users/{id}/status", s.setUserStatus)
@@ -233,13 +238,13 @@ func (s *Server) updateGatePass(w http.ResponseWriter, r *http.Request) {
 	data := view.NewPassData{PassType: r.FormValue("pass_type"), PassDate: r.FormValue("pass_date"), ExpectedReturnDate: r.FormValue("expected_return_date"), Directorate: r.FormValue("directorate"), Project: r.FormValue("project"), ConsigneeName: r.FormValue("consignee_name"), Packages: r.FormValue("packages"), Purpose: r.FormValue("purpose"), Authority: r.FormValue("authority"), ItemCode: r.FormValue("item_code"), ItemName: r.FormValue("item_name"), ItemUnit: r.FormValue("item_unit"), ItemQuantity: r.FormValue("item_quantity")}
 	draft, err := draftFromForm(data)
 	if err == nil {
-		err = s.Passes.UpdateDraft(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, r.PathValue("passNo"), draft)
+		err = s.Passes.UpdateDraft(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, r.PathValue("id"), draft)
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/gate-passes/"+r.PathValue("passNo")+"?notice=Draft+updated", http.StatusSeeOther)
+	http.Redirect(w, r, "/gate-passes/"+r.PathValue("id")+"?notice=Draft+updated", http.StatusSeeOther)
 }
 
 func (s *Server) gatePassDetail(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +253,7 @@ func (s *Server) gatePassDetail(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	detail, err := s.Passes.FindByPassNo(r.Context(), r.PathValue("passNo"))
+	detail, err := s.Passes.FindByID(r.Context(), r.PathValue("id"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -266,7 +271,7 @@ func (s *Server) passPDF(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	detail, err := s.Passes.FindByPassNo(r.Context(), r.PathValue("passNo"))
+	detail, err := s.Passes.FindByID(r.Context(), r.PathValue("id"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -415,16 +420,24 @@ func (s *Server) workflow(w http.ResponseWriter, r *http.Request, action rbac.Ac
 		return
 	}
 	reason := strings.TrimSpace(r.FormValue("reason"))
-	passNo := r.PathValue("passNo")
-	if err := s.Passes.Transition(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, passNo, action, reason); err != nil {
-		http.Redirect(w, r, "/gate-passes/"+passNo+"?error="+urlQuery(err.Error()), http.StatusSeeOther)
+	id := r.PathValue("id")
+	_, findErr := s.Passes.FindByID(r.Context(), id)
+	if findErr != nil {
+		http.NotFound(w, r)
 		return
 	}
-	http.Redirect(w, r, "/gate-passes/"+passNo+"?notice=Workflow+action+recorded", http.StatusSeeOther)
+	if err := s.Passes.TransitionByID(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, id, action, reason); err != nil {
+		http.Redirect(w, r, "/gate-passes/"+id+"?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/gate-passes/"+id+"?notice=Workflow+action+recorded", http.StatusSeeOther)
 }
 
 func (s *Server) recordAccountAudit(ctx context.Context, targetID, action string, actor auth.User, detail string) error {
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO audit_events(entity_type,entity_id,action,actor_id,actor_role,reason,metadata) VALUES('user',$1,$2,$3,$4,NULLIF($5,''),jsonb_build_object('target_user_id',$1))`, targetID, action, actor.ID, actor.Role, detail)
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO audit_events(entity_type,entity_id,action,actor_id,actor_role,reason,metadata) VALUES('user',$1,$2,$3,$4,NULLIF($5::text,''),jsonb_build_object('target_user_id',$1::uuid::text))`, targetID, action, actor.ID, actor.Role, detail)
+	if err != nil && s.Logger != nil {
+		s.Logger.Error("account audit failed", "target_id", targetID, "action", action, "error", err)
+	}
 	return err
 }
 

@@ -57,20 +57,20 @@ templ GatePassDetail(data view.DetailData) {
 
 templ GatePassDetailContent(data view.DetailData) {
   <section class="detail-header panel">
-    <div><div class="eyebrow accent">PASS RECORD</div><h2>{ data.Pass.PassNo }</h2><p class="panel-note">Created { data.Pass.PassDate } · { data.Pass.PassType }</p></div><a class="button secondary" href={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/pdf") }>Open A4 PDF</a>
+    <div><div class="eyebrow accent">PASS RECORD</div><h2>{ data.Pass.PassNo }</h2><p class="panel-note">Created { data.Pass.PassDate } · { data.Pass.PassType }</p></div><a class="button secondary" href={ templ.URL("/gate-passes/" + data.Pass.ID + "/pdf") }>Open A4 PDF</a>
     <span class="status-badge large">{ data.Pass.Status }</span>
   </section>
   <div class="detail-grid">
     <section class="panel"><div class="section-heading"><div><h2>Movement details</h2><p class="panel-note">These values are retained with the pass record.</p></div></div><dl class="detail-list"><div><dt>Directorate</dt><dd>{ data.Pass.Directorate }</dd></div><div><dt>Project</dt><dd>{ data.Pass.Project }</dd></div><div><dt>Consignee</dt><dd>{ data.Pass.Consignee }</dd></div><div><dt>Packages</dt><dd>{ fmt.Sprint(data.Pass.Packages) }</dd></div><div><dt>Purpose</dt><dd>{ data.Pass.Purpose }</dd></div><div><dt>Authority</dt><dd>{ data.Pass.Authority }</dd></div><div><dt>Expected return</dt><dd>{ data.Pass.ExpectedReturnDate }</dd></div><div><dt>Actual return</dt><dd>{ data.Pass.ActualReturnDate }</dd></div></dl></section>
     <section class="panel"><div class="section-heading"><div><h2>Workflow action</h2><p class="panel-note">Every action is checked again on the server.</p></div></div>
       if data.Pass.Status == "DRAFT" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
-        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/submit") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Submit for approval</button></form>
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.ID + "/submit") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Submit for approval</button></form>
       } else if data.Pass.Status == "SUBMITTED" && (data.Role == "ADMIN" || data.Role == "ISSUING") {
-        <div class="action-stack"><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/approve") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Approve pass</button></form><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/reject") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Rejection reason<textarea name="reason" rows="3" required></textarea></label><button class="button danger full" type="submit">Reject with reason</button></form></div>
+        <div class="action-stack"><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.ID + "/approve") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Approve pass</button></form><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.ID + "/reject") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Rejection reason<textarea name="reason" rows="3" required></textarea></label><button class="button danger full" type="submit">Reject with reason</button></form></div>
       } else if data.Pass.Status == "APPROVED" && (data.Role == "ADMIN" || data.Role == "SECURITY") {
-        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/pass-out") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Security control number<input name="reason" required/></label><button class="button full" type="submit">Record pass-out</button></form>
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.ID + "/pass-out") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Security control number<input name="reason" required/></label><button class="button full" type="submit">Record pass-out</button></form>
       } else if data.Pass.Status == "PASSED_OUT" && data.Pass.PassType == "RETURNABLE" && (data.Role == "ADMIN" || data.Role == "SECURITY") {
-        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/return") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Record material return</button></form>
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.ID + "/return") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Record material return</button></form>
       } else if data.Pass.Status == "NOT_APPROVED" {
         if data.Role == "ADMIN" || data.Role == "INVENTORY" {
           <a class="button full" href={ templ.URL("/gate-passes/new?revision=" + data.Pass.PassNo) }>Create revision</a>

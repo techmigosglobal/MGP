@@ -1,6 +1,7 @@
 package view
 
 type PassRow struct {
+	ID         string
 	PassNo     string
 	PassDate   string
 	Consignee  string
@@ -14,6 +15,7 @@ type PassRow struct {
 }
 
 type PassDetail struct {
+	ID                 string
 	PassNo             string
 	PassDate           string
 	PassType           string
