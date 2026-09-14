@@ -1,0 +1,36 @@
+package templates
+
+import (
+  "fmt"
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ Dashboard(data view.PageData) {
+  @layouts.Base(data, DashboardContent(data))
+}
+
+templ DashboardContent(data view.PageData) {
+  <section class="metric-grid">
+    <article class="metric"><div class="metric-value">{ fmt.Sprint(data.Visible) }</div><div class="metric-label">Visible passes</div></article>
+    <article class="metric"><div class="metric-value">{ fmt.Sprint(data.Pending) }</div><div class="metric-label">Awaiting approval</div></article>
+    <article class="metric"><div class="metric-value">{ fmt.Sprint(data.PassedOut) }</div><div class="metric-label">Outside gate</div></article>
+    <article class="metric"><div class="metric-value">{ fmt.Sprint(data.Overdue) }</div><div class="metric-label">Overdue returns</div></article>
+  </section>
+  <section class="panel">
+    <div class="toolbar"><div><h2>Recent operational records</h2><p class="panel-note">Live server-calculated records scoped to your role.</p></div><a class="button" href="/gate-passes">Open register</a></div>
+    @PassTable(data.Passes)
+  </section>
+}
+
+templ PassTable(rows []view.PassRow) {
+  if len(rows) == 0 {
+    <div class="empty">No gate passes are available.</div>
+  } else {
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Pass no.</th><th>Date</th><th>Consignee</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      for _, row := range rows {
+        <tr><td><a class="pass-link" href={ templ.URL("/gate-passes/" + row.PassNo) }>{ row.PassNo }</a></td><td>{ row.PassDate }</td><td>{ row.Consignee }</td><td>{ row.PassType }</td><td><span class="status-badge">{ row.Status }</span></td><td><a class="button ghost small" href={ templ.URL("/gate-passes/" + row.PassNo) }>Open</a></td></tr>
+      }
+    </tbody></table></div>
+  }
+}

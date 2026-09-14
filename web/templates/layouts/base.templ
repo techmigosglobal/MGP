@@ -1,0 +1,61 @@
+package templates
+
+import "github.com/techmigos/mgp/internal/view"
+
+templ Base(data view.PageData, content templ.Component) {
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="csrf-token" content={ data.CSRFToken }/>
+  <title>{ data.Title } · MGP Control Room</title>
+  <link rel="stylesheet" href="/static/css/tailwind.css"/>
+  <link rel="stylesheet" href="/static/css/app.css"/>
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/alpine.min.js" defer></script>
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div>
+        <div class="eyebrow">MATERIAL GATE PASS</div>
+        <div class="brand-title">MGP Control Room</div>
+        <div class="brand-rule"></div>
+        <nav class="nav" aria-label="Primary navigation">
+          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "dashboard")) } href="/dashboard">Overview</a>
+          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "passes")) } href="/gate-passes">Gate passes</a>
+          if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "create")) } href="/gate-passes/new">Create pass</a>
+          }
+          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "inventory")) } href="/inventory">Inventory master</a>
+          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "consignees")) } href="/consignees">Consignee master</a>
+          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "reports")) } href="/reports">Reports</a>
+          if data.Role == "ADMIN" || data.Role == "ISSUING" {
+            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "audit")) } href="/audit">Audit log</a>
+          }
+          if data.Role == "ADMIN" {
+            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "users")) } href="/users">User master</a>
+            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "settings")) } href="/settings">Organization</a>
+          }
+        </nav>
+      </div>
+      <div class="sidebar-footer">BACKEND AUTHORITATIVE<br/><span>Every transition is validated and recorded by the server.</span></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div><div class="eyebrow accent">{ data.Role } WORKSPACE</div><h1>{ data.Title }</h1></div>
+        <div class="operator-card"><span>{ data.UserName }</span><span class="role-chip">{ data.Role }</span><form method="post" action="/logout"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button secondary small" type="submit">Sign out</button></form></div>
+      </header>
+      if data.Notice != "" {
+        <div class="notice success">{ data.Notice }</div>
+      }
+      if data.Error != "" {
+        <div class="notice error">{ data.Error }</div>
+      }
+      @content
+    </main>
+  </div>
+</body>
+</html>
+}

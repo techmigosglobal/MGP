@@ -1,0 +1,93 @@
+package templates
+
+import (
+  "fmt"
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ GatePasses(data view.PageData) {
+  @layouts.Base(data, GatePassesContent(data))
+}
+
+templ GatePassesContent(data view.PageData) {
+  <section class="panel">
+    <div class="toolbar">
+      <div><h2>Gate-pass register</h2><p class="panel-note">Server-filtered operational records. Open a pass to view its authoritative state and available actions.</p></div>
+      if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+        <a class="button" href="/gate-passes/new">Create pass</a>
+      }
+    </div>
+    @PassTable(data.Passes)
+  </section>
+}
+
+templ NewGatePass(data view.NewPassData) {
+  @layouts.Base(data.PageData, NewGatePassContent(data))
+}
+
+templ NewGatePassContent(data view.NewPassData) {
+  <section class="panel narrow-panel">
+    <div class="section-heading"><div><div class="eyebrow accent">CONTROLLED CREATION</div><h2>New gate pass</h2><p class="panel-note">The server allocates the pass number inside the database transaction.</p></div></div>
+    <form class="form-grid" method="post" action="/gate-passes">
+      <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+      <input type="hidden" name="revision_of" value={ data.RevisionOf }/>
+      <div class="field-span-2"><label>Pass type<select name="pass_type" required><option value="RETURNABLE">Returnable</option><option value="NON_RETURNABLE">Non-returnable</option></select></label></div>
+      <label>Pass date<input type="date" name="pass_date" value={ data.PassDate } required/></label>
+      <label>Expected return date<input type="date" name="expected_return_date" value={ data.ExpectedReturnDate }/><span class="field-note">Required for returnable material.</span></label>
+      <label>Directorate<input name="directorate" value={ data.Directorate } required/></label>
+      <label>Project<input name="project" value={ data.Project } required/></label>
+      <label class="field-span-2">Consignee<input name="consignee_name" value={ data.ConsigneeName } required/></label>
+      <label>Packages<input type="number" min="1" name="packages" value={ data.Packages } required/></label>
+      <label>Authority / reference<input name="authority" value={ data.Authority } required/></label>
+      <label class="field-span-2">Purpose<textarea name="purpose" rows="3" required>{ data.Purpose }</textarea></label>
+      <div class="field-span-2 subsection"><div class="eyebrow">MATERIAL LINE</div><h3>Item being moved</h3></div>
+      <label>Item code<input name="item_code" value={ data.ItemCode }/></label>
+      <label>Item name<input name="item_name" value={ data.ItemName } required/></label>
+      <label>Unit<input name="item_unit" value={ data.ItemUnit }/></label>
+      <label>Quantity<input type="number" min="0.001" step="0.001" name="item_quantity" value={ data.ItemQuantity } required/></label>
+      <div class="field-span-2 form-actions"><a class="button secondary" href="/gate-passes">Cancel</a><button class="button" type="submit">Save draft</button></div>
+    </form>
+  </section>
+}
+
+templ GatePassDetail(data view.DetailData) {
+  @layouts.Base(data.PageData, GatePassDetailContent(data))
+}
+
+templ GatePassDetailContent(data view.DetailData) {
+  <section class="detail-header panel">
+    <div><div class="eyebrow accent">PASS RECORD</div><h2>{ data.Pass.PassNo }</h2><p class="panel-note">Created { data.Pass.PassDate } · { data.Pass.PassType }</p></div><a class="button secondary" href={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/pdf") }>Open A4 PDF</a>
+    <span class="status-badge large">{ data.Pass.Status }</span>
+  </section>
+  <div class="detail-grid">
+    <section class="panel"><div class="section-heading"><div><h2>Movement details</h2><p class="panel-note">These values are retained with the pass record.</p></div></div><dl class="detail-list"><div><dt>Directorate</dt><dd>{ data.Pass.Directorate }</dd></div><div><dt>Project</dt><dd>{ data.Pass.Project }</dd></div><div><dt>Consignee</dt><dd>{ data.Pass.Consignee }</dd></div><div><dt>Packages</dt><dd>{ fmt.Sprint(data.Pass.Packages) }</dd></div><div><dt>Purpose</dt><dd>{ data.Pass.Purpose }</dd></div><div><dt>Authority</dt><dd>{ data.Pass.Authority }</dd></div><div><dt>Expected return</dt><dd>{ data.Pass.ExpectedReturnDate }</dd></div><div><dt>Actual return</dt><dd>{ data.Pass.ActualReturnDate }</dd></div></dl></section>
+    <section class="panel"><div class="section-heading"><div><h2>Workflow action</h2><p class="panel-note">Every action is checked again on the server.</p></div></div>
+      if data.Pass.Status == "DRAFT" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/submit") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Submit for approval</button></form>
+      } else if data.Pass.Status == "SUBMITTED" && (data.Role == "ADMIN" || data.Role == "ISSUING") {
+        <div class="action-stack"><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/approve") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Approve pass</button></form><form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/reject") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Rejection reason<textarea name="reason" rows="3" required></textarea></label><button class="button danger full" type="submit">Reject with reason</button></form></div>
+      } else if data.Pass.Status == "APPROVED" && (data.Role == "ADMIN" || data.Role == "SECURITY") {
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/pass-out") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>Security control number<input name="reason" required/></label><button class="button full" type="submit">Record pass-out</button></form>
+      } else if data.Pass.Status == "PASSED_OUT" && data.Pass.PassType == "RETURNABLE" && (data.Role == "ADMIN" || data.Role == "SECURITY") {
+        <form method="post" action={ templ.URL("/gate-passes/" + data.Pass.PassNo + "/return") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button full" type="submit">Record material return</button></form>
+      } else if data.Pass.Status == "NOT_APPROVED" {
+        if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+          <a class="button full" href={ templ.URL("/gate-passes/new?revision=" + data.Pass.PassNo) }>Create revision</a>
+        } else {
+          <div class="notice warning"><strong>Revision required.</strong><br/>This pass was rejected and must be revised by its creator.</div>
+        }
+      } else {
+        <div class="empty">No action is available for this role at the current state.</div>
+      }
+      if data.Pass.RejectionReason != "" {
+        <div class="notice error"><strong>Rejection reason</strong><br/>{ data.Pass.RejectionReason }</div>
+      }
+    </section>
+  </div>
+  <section class="panel"><div class="section-heading"><div><h2>Material lines</h2><p class="panel-note">Snapshot retained at creation time.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Code</th><th>Item</th><th>Unit</th><th>Quantity</th></tr></thead><tbody>
+    for _, item := range data.Pass.Items {
+      <tr><td>{ item.Code }</td><td>{ item.Name }</td><td>{ item.Unit }</td><td>{ item.Quantity }</td></tr>
+    }
+  </tbody></table></div></section>
+}

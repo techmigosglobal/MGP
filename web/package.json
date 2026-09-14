@@ -1,0 +1,16 @@
+{
+  "name": "mgp-web-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor-assets.mjs",
+    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.css --minify",
+    "build": "npm run vendor && npm run build:css"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "alpinejs": "^3.14.9",
+    "htmx.org": "^2.0.7",
+    "tailwindcss": "^4.1.13"
+  }
+}

@@ -1,0 +1,30 @@
+package templates
+
+import "github.com/techmigos/mgp/internal/view"
+
+templ Login(data view.PageData) {
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sign in · MGP Control Room</title>
+  <link rel="stylesheet" href="/static/css/tailwind.css"/>
+  <link rel="stylesheet" href="/static/css/app.css"/>
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <section class="login-story"><div class="eyebrow">MATERIAL MOVEMENT CONTROL</div><h1>Every pass.<br/>Every stage.<br/>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class="story-footer">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section>
+    <form class="login-form" method="post" action="/login">
+      <div><div class="eyebrow accent">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p>Use the role account provisioned by your MGP administrator.</p></div>
+      if data.Error != "" {
+        <div class="notice error">{ data.Error }</div>
+      }
+      <label>Email<input type="email" name="email" autocomplete="username" required/></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required/></label>
+      <button class="button" type="submit">Sign in</button>
+    </form>
+  </main>
+</body>
+</html>
+}

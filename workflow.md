@@ -1,32 +1,62 @@
-# Material Gate Pass Workflow
+# MGP Workflow Contract
 
-This document is the operational contract for the backend-authoritative MGP application. The technical Directus Administrator is a deployment account and is never an MGP business role.
+This document is the authoritative state and role contract. The server must enforce it even when a request is sent directly without the normal UI.
 
-## State flow
+## State machine
 
-`DRAFT → SUBMITTED → APPROVED → PASSED_OUT → RETURNED`
+```text
+DRAFT -> SUBMITTED -> APPROVED -> PASSED_OUT -> RETURNED
+                  \-> NOT_APPROVED -> linked revision DRAFT
+```
 
-An Issuing Officer can instead move `SUBMITTED → NOT_APPROVED`. The original rejected record remains immutable; Inventory creates a linked revision as a new `DRAFT`. A non-returnable pass remains `PASSED_OUT` after physical movement.
+Non-returnable material ends its operational lifecycle at `PASSED_OUT`. Returnable material ends at `RETURNED`.
 
-| Role | Desktop workspace and permitted work | Server enforcement and denials | Audit / acceptance evidence |
-| --- | --- | --- | --- |
-| `ADMIN` | Manages MGP users, organization details, masters, reports, audit log, backup/restore guidance, and may assist with a workflow stage only when separation rules allow it. | Cannot use the technical Directus account as an application role. Cannot approve/reject a pass they created and cannot complete more than one operational stage of one pass. Only Admin can manage users/settings and view backup status. | `CREATE_USER`, `UPDATE_USER`, `UPDATE_ORGANIZATION`, master, draft and transition events. Test self-approval and repeated-stage denials. |
-| `INVENTORY` | Creates and edits only own drafts; maintains inventory/consignee masters; submits complete drafts; creates a revision from their rejected pass; exports masters. | Cannot edit after submission, approve/reject, pass out, return, manage users/settings, or read audit events. Revision requires a rejected original created by that operator. | `CREATE_DRAFT`, `EDIT_DRAFT`, `SUBMIT`, `CREATE_REVISION`, master events. Test draft ownership, required items and expected date for returnable passes. |
-| `ISSUING` | Reviews the submitted queue; approves or rejects with a required rejection reason; reads audit and operational reports; exports masters. | Cannot create/edit a pass, pass out or return. Creator approval/rejection is denied even if the actor otherwise has Issuing authority. | `APPROVE` or `REJECT` with prior/current state, actor and optional reason. Test a creator/approver conflict and invalid-state transition. |
-| `SECURITY` | Sees only `APPROVED`, `PASSED_OUT`, and `RETURNED` passes; records the security control number at pass-out and actual date at return. | Cannot see drafts, submissions or rejections; cannot prepare, approve/reject, manage masters/users/settings, or read audit. Pass-out requires an approved record and control number; return requires a returnable passed-out record. | `PASS-OUT` includes security control number; `RETURN` includes actual date. Test scoped list/read denial and non-returnable return denial. |
-| `VIEWER` | Read-only register, pass details, official PDFs for approved+ records, and operational reports. | No creation, edit, revision, transition, master management/export, audit, users/settings, or backup access. | Read access generates no mutation events. Test every mutation route returns `403`. |
+## Route contract
 
-## Official documents
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/login` | Login form |
+| POST | `/login` | Authenticate local account |
+| POST | `/logout` | CSRF-protected logout |
+| GET | `/dashboard` | Role-scoped operational summary |
+| GET | `/gate-passes` | Register |
+| GET | `/gate-passes/new` | Draft form |
+| POST | `/gate-passes` | Create draft or linked revision |
+| GET | `/gate-passes/{id}` | Detail and available actions |
+| PATCH | `/gate-passes/{id}` | Update an owned draft |
+| POST | `/gate-passes/{id}/submit` | Submit draft |
+| POST | `/gate-passes/{id}/approve` | Independent approval |
+| POST | `/gate-passes/{id}/reject` | Rejection with mandatory reason |
+| POST | `/gate-passes/{id}/pass-out` | Security physical release |
+| POST | `/gate-passes/{id}/return` | Security physical return |
 
-Draft, submitted, and rejected records are not official documents. The A4 preview/print/download PDF is available only for `APPROVED`, `PASSED_OUT`, and `RETURNED` records. It contains organization identity, pass number/status, consignee, authority, material lines, movement/security data, and signature areas. The downloadable PDF and print preview use the same backend pass data.
+All POST routes require an active account and a matching server-side CSRF token. All action routes lock the current row, reload state, evaluate policy, update only from the expected state, and append an audit event in the same transaction.
 
-## Recovery boundary
+## Role matrix
 
-The UI displays backup status and the approved host procedure only. `scripts/backup.sh` creates the host-side archive; `scripts/restore-validate.sh` validates it in isolation. Restoration into operational data is not an in-application action.
+| Action | ADMIN | INVENTORY | ISSUING | SECURITY | VIEWER |
+| --- | --- | --- | --- | --- | --- |
+| Create draft | Yes | Yes | No | No | No |
+| Edit/submit owned draft | Yes | Owned only | No | No | No |
+| Approve/reject submitted | Yes, if independent | No | Yes, if independent | No | No |
+| Revise rejected pass | Yes | Owned only | No | No | No |
+| Pass out approved pass | Yes, if independent | No | No | Yes | No |
+| Return passed-out returnable | Yes, if independent | No | No | Yes | No |
+| Read register | Yes | Yes | Yes | Operational states | Yes |
+| Manage users/settings | Yes | No | No | No | No |
 
-## Required acceptance run
+Admin operational actions still observe separation of duty. The creator cannot approve/reject their own pass. An actor who already participated in an earlier operational stage cannot perform the next independent stage.
 
-1. Run `npm run build`, `npm run check`, and `npm test`.
-2. Run `npm run verify:docker` for an isolated all-role API and Docker check.
-3. With the isolated stack still running, run `npm run verify:browser` to validate each role UI, desktop layout, clean browser console, and generated official PDF.
-4. Treat target-server backup/restore and real-operator acceptance as separate production evidence.
+## Required validation
+
+- Returnable passes require an expected return date.
+- Packages are positive whole numbers.
+- Each pass has at least one item with a positive quantity and name.
+- Directorate, project, consignee, purpose, and authority are required.
+- Rejection requires a non-empty reason.
+- Pass-out requires a security control number.
+- Return is allowed only for an approved pass that has been passed out and is marked returnable.
+
+## Audit contract
+
+Each mutation records entity, entity ID, action, previous state, next state, actor ID, actor role, reason where applicable, pass number metadata, request ID, and timestamp. The database trigger rejects updates and deletes against `audit_events`.

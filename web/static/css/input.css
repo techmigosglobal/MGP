@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@source "../../templates";
+@source "../../static";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-ink: #17231f;
+  --color-paper: #f4f1e9;
+  --color-accent: #b85c38;
+}

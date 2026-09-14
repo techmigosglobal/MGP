@@ -1,0 +1,32 @@
+package templates
+
+import (
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ Users(data view.UsersData) {
+  @layouts.Base(data.PageData, UsersContent(data))
+}
+
+templ UsersContent(data view.UsersData) {
+  <section class="panel">
+    <div class="toolbar"><div><div class="eyebrow accent">ACCESS CONTROL</div><h2>User master</h2><p class="panel-note">Application accounts are local, role-bound, and auditable.</p></div></div>
+    <form class="form-grid compact-form" method="post" action="/users">
+      <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+      <label>Name<input name="name" required/></label>
+      <label>Email<input type="email" name="email" required/></label>
+      <label>Role<select name="role" required><option>INVENTORY</option><option>ISSUING</option><option>SECURITY</option><option>VIEWER</option><option>ADMIN</option></select></label>
+      <label>Temporary password<input type="password" name="password" minlength="12" required/></label>
+      <div class="form-actions"><button class="button" type="submit">Create account</button></div>
+    </form>
+  </section>
+  <section class="panel"><div class="section-heading"><div><h2>Accounts</h2><p class="panel-note">Suspended accounts are denied at login and on every authenticated request.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    for _, user := range data.Users {
+      <tr><td>{ user.Name }</td><td>{ user.Email }</td><td><span class="role-chip">{ user.Role }</span></td><td><span class="status-badge">{ user.Status }</span></td><td><div class="inline-actions"><form method="post" action={ templ.URL("/users/" + user.ID + "/status") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input type="hidden" name="status" value={ userStatusToggle(user.Status) }/><button class="button ghost small" type="submit">{ userStatusLabel(user.Status) }</button></form><form method="post" action={ templ.URL("/users/" + user.ID + "/reset-password") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input class="small-input" name="password" type="password" minlength="12" placeholder="New password" required/><button class="button ghost small" type="submit">Reset</button></form></div></td></tr>
+    }
+  </tbody></table></div></section>
+}
+
+func userStatusToggle(status string) string { if status == "active" { return "suspended" }; return "active" }
+func userStatusLabel(status string) string { if status == "active" { return "Suspend" }; return "Activate" }
