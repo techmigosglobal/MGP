@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/techmigos/mgp/internal/audit"
 	"github.com/techmigos/mgp/internal/auth"
 	"github.com/techmigos/mgp/internal/config"
 	"github.com/techmigos/mgp/internal/documents"
 	"github.com/techmigos/mgp/internal/gatepass"
 	httpserver "github.com/techmigos/mgp/internal/http"
+	"github.com/techmigos/mgp/internal/masterdata"
 	"github.com/techmigos/mgp/internal/platform/database"
 	"github.com/techmigos/mgp/internal/platform/sessions"
 )
@@ -48,6 +50,9 @@ func main() {
 		Users:     auth.UserStore{DB: db},
 		Passes:    gatepass.Store{DB: db},
 		Documents: documents.Service{DB: db, Root: cfg.DocumentDir},
+		Master:    masterdata.Store{DB: db},
+		Audit:     audit.Store{DB: db},
+		Settings:  config.OrganizationStore{DB: db},
 		Sessions:  sessions.Store{DB: db, SecureCookie: cfg.SecureCookie, Key: cfg.SessionKey},
 		Logger:    logger,
 	}

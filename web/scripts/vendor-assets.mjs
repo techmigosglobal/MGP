@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assets = [
   ["node_modules/htmx.org/dist/htmx.min.js", "static/js/htmx.min.js"],
-  ["node_modules/alpinejs/dist/cdn.min.js", "static/js/alpine.min.js"]
+  ["node_modules/@alpinejs/csp/dist/cdn.min.js", "static/js/alpine.min.js"]
 ];
 
 for (const [source, target] of assets) {

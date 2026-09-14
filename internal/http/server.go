@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/subtle"
 	"database/sql"
+	"encoding/csv"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"path/filepath"
@@ -13,11 +16,13 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/techmigos/mgp/internal/audit"
 	"github.com/techmigos/mgp/internal/auth"
 	"github.com/techmigos/mgp/internal/config"
 	"github.com/techmigos/mgp/internal/documents"
 	"github.com/techmigos/mgp/internal/gatepass"
 	"github.com/techmigos/mgp/internal/http/middleware"
+	"github.com/techmigos/mgp/internal/masterdata"
 	"github.com/techmigos/mgp/internal/platform/sessions"
 	"github.com/techmigos/mgp/internal/rbac"
 	"github.com/techmigos/mgp/internal/view"
@@ -31,6 +36,9 @@ type Server struct {
 	Users     auth.UserStore
 	Passes    gatepass.Store
 	Documents documents.Service
+	Master    masterdata.Store
+	Audit     audit.Store
+	Settings  config.OrganizationStore
 	Sessions  sessions.Store
 	Logger    *slog.Logger
 }
@@ -69,6 +77,17 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /users", s.createUser)
 	mux.HandleFunc("POST /users/{id}/status", s.setUserStatus)
 	mux.HandleFunc("POST /users/{id}/reset-password", s.resetUserPassword)
+	mux.HandleFunc("GET /inventory", s.inventory)
+	mux.HandleFunc("POST /inventory", s.createInventory)
+	mux.HandleFunc("POST /inventory/import", s.importInventory)
+	mux.HandleFunc("POST /inventory/{id}/archive", s.archiveInventory)
+	mux.HandleFunc("GET /consignees", s.consignees)
+	mux.HandleFunc("POST /consignees", s.createConsignee)
+	mux.HandleFunc("POST /consignees/{id}/archive", s.archiveConsignee)
+	mux.HandleFunc("GET /reports", s.reports)
+	mux.HandleFunc("GET /audit", s.auditLog)
+	mux.HandleFunc("GET /settings", s.settings)
+	mux.HandleFunc("POST /settings", s.updateSettings)
 	return middleware.SecurityHeaders(logging(s.Logger, mux))
 }
 
@@ -407,6 +426,242 @@ func (s *Server) workflow(w http.ResponseWriter, r *http.Request, action rbac.Ac
 func (s *Server) recordAccountAudit(ctx context.Context, targetID, action string, actor auth.User, detail string) error {
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO audit_events(entity_type,entity_id,action,actor_id,actor_role,reason,metadata) VALUES('user',$1,$2,$3,$4,NULLIF($5,''),jsonb_build_object('target_user_id',$1))`, targetID, action, actor.ID, actor.Role, detail)
 	return err
+}
+
+func (s *Server) reports(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	actor := rbac.Actor{ID: user.ID, Role: user.Role}
+	rows, err := s.Passes.ListRows(r.Context(), actor, 200)
+	if err != nil {
+		http.Error(w, "could not load report", http.StatusInternalServerError)
+		return
+	}
+	visible, pending, passedOut, overdue, err := s.Passes.Counts(r.Context(), actor)
+	if err != nil {
+		http.Error(w, "could not load report", http.StatusInternalServerError)
+		return
+	}
+	render(w, r, pages.Reports(view.PageData{Title: "Reports", Active: "reports", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Passes: rows, Visible: visible, Pending: pending, PassedOut: passedOut, Overdue: overdue}))
+}
+
+func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if user.Role != rbac.RoleAdmin && user.Role != rbac.RoleIssuing {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	events, err := s.Audit.Recent(r.Context(), 200)
+	if err != nil {
+		http.Error(w, "could not load audit history", http.StatusInternalServerError)
+		return
+	}
+	rows := make([]view.AuditRow, 0, len(events))
+	for _, event := range events {
+		rows = append(rows, view.AuditRow{CreatedAt: event.CreatedAt.Format("02 Jan 2006 15:04"), EntityType: event.EntityType, Action: event.Action, ActorRole: event.ActorRole, Reason: event.Reason, Metadata: event.Metadata})
+	}
+	render(w, r, pages.Audit(view.AuditData{PageData: view.PageData{Title: "Audit history", Active: "audit", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken}, Events: rows}))
+}
+
+func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if user.Role != rbac.RoleAdmin {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	organization, err := s.Settings.Get(r.Context())
+	if err != nil {
+		http.Error(w, "could not load settings", http.StatusInternalServerError)
+		return
+	}
+	render(w, r, pages.Settings(view.SettingsData{PageData: view.PageData{Title: "Organization settings", Active: "settings", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, OrganizationName: organization.Name, OrganizationAddress: organization.Address, DefaultDirectorate: organization.DefaultDirectorate, DefaultProject: organization.DefaultProject}))
+}
+
+func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if user.Role != rbac.RoleAdmin || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	err = s.Settings.Update(r.Context(), config.Organization{Name: r.FormValue("name"), Address: r.FormValue("address"), DefaultDirectorate: r.FormValue("default_directorate"), DefaultProject: r.FormValue("default_project")})
+	if err != nil {
+		http.Redirect(w, r, "/settings?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	if err := s.recordAccountAudit(r.Context(), user.ID, "UPDATE_ORGANIZATION", user, ""); err != nil {
+		http.Error(w, "audit unavailable", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/settings?notice=Organization+settings+saved", http.StatusSeeOther)
+}
+
+func (s *Server) inventory(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	items, err := s.Master.Inventory(r.Context())
+	if err != nil {
+		http.Error(w, "could not load inventory", http.StatusInternalServerError)
+		return
+	}
+	rows := make([]view.MasterInventoryRow, 0, len(items))
+	for _, item := range items {
+		rows = append(rows, view.MasterInventoryRow{ID: item.ID, Code: item.Code, Name: item.Name, Category: item.Category, Unit: item.Unit, Quantity: item.Quantity, Holder: item.Holder, Status: item.Status})
+	}
+	render(w, r, pages.Inventory(view.MasterData{PageData: view.PageData{Title: "Inventory master", Active: "inventory", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, Inventory: rows}))
+}
+
+func (s *Server) createInventory(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !canEditMaster(user) || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if _, err := s.Master.CreateInventory(r.Context(), masterdata.InventoryItem{Code: r.FormValue("item_code"), Name: r.FormValue("item_name"), Category: r.FormValue("category"), Unit: r.FormValue("unit"), Quantity: r.FormValue("quantity"), Holder: r.FormValue("holder")}); err != nil {
+		http.Redirect(w, r, "/inventory?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/inventory?notice=Inventory+item+created", http.StatusSeeOther)
+}
+
+func (s *Server) importInventory(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !canEditMaster(user) || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	file, _, err := r.FormFile("csv")
+	if err != nil {
+		http.Redirect(w, r, "/inventory?error=CSV+file+is+required", http.StatusSeeOther)
+		return
+	}
+	defer file.Close()
+	reader := csv.NewReader(file)
+	header, err := reader.Read()
+	if err != nil || len(header) < 6 || strings.ToLower(strings.TrimSpace(header[0])) != "item_code" || strings.ToLower(strings.TrimSpace(header[1])) != "item_name" {
+		http.Redirect(w, r, "/inventory?error=CSV+header+must+start+with+item_code,item_name", http.StatusSeeOther)
+		return
+	}
+	var items []masterdata.InventoryItem
+	for rowNumber := 2; ; rowNumber++ {
+		row, readErr := reader.Read()
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil || len(row) < 6 {
+			http.Redirect(w, r, "/inventory?error="+urlQuery(fmt.Sprintf("invalid CSV row %d", rowNumber)), http.StatusSeeOther)
+			return
+		}
+		if _, parseErr := strconv.ParseFloat(strings.TrimSpace(row[4]), 64); parseErr != nil {
+			http.Redirect(w, r, "/inventory?error="+urlQuery(fmt.Sprintf("invalid quantity on CSV row %d", rowNumber)), http.StatusSeeOther)
+			return
+		}
+		items = append(items, masterdata.InventoryItem{Code: row[0], Name: row[1], Category: row[2], Unit: row[3], Quantity: row[4], Holder: row[5]})
+	}
+	if err := s.Master.ImportInventory(r.Context(), items); err != nil {
+		http.Redirect(w, r, "/inventory?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/inventory?notice=CSV+validated+and+imported", http.StatusSeeOther)
+}
+
+func (s *Server) archiveInventory(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !canEditMaster(user) || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := s.Master.ArchiveInventory(r.Context(), r.PathValue("id")); err != nil {
+		http.Redirect(w, r, "/inventory?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/inventory?notice=Inventory+item+archived", http.StatusSeeOther)
+}
+
+func (s *Server) consignees(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	items, err := s.Master.Consignees(r.Context())
+	if err != nil {
+		http.Error(w, "could not load consignees", http.StatusInternalServerError)
+		return
+	}
+	rows := make([]view.MasterConsigneeRow, 0, len(items))
+	for _, item := range items {
+		rows = append(rows, view.MasterConsigneeRow{ID: item.ID, Name: item.Name, Address: item.Address, Contact: item.Contact, Status: item.Status})
+	}
+	render(w, r, pages.Consignees(view.MasterData{PageData: view.PageData{Title: "Consignee master", Active: "consignees", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, Consignees: rows}))
+}
+
+func (s *Server) createConsignee(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !canEditMaster(user) || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if _, err := s.Master.CreateConsignee(r.Context(), masterdata.Consignee{Name: r.FormValue("name"), Address: r.FormValue("address"), Contact: r.FormValue("contact")}); err != nil {
+		http.Redirect(w, r, "/consignees?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/consignees?notice=Consignee+created", http.StatusSeeOther)
+}
+
+func (s *Server) archiveConsignee(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !canEditMaster(user) || !validCSRF(r, session) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := s.Master.ArchiveConsignee(r.Context(), r.PathValue("id")); err != nil {
+		http.Redirect(w, r, "/consignees?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/consignees?notice=Consignee+archived", http.StatusSeeOther)
+}
+
+func canEditMaster(user auth.User) bool {
+	return user.Role == rbac.RoleAdmin || user.Role == rbac.RoleInventory
 }
 
 func (s *Server) currentUser(r *http.Request) (auth.User, sessions.Session, error) {

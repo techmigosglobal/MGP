@@ -1,0 +1,18 @@
+package templates
+
+import (
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ Audit(data view.AuditData) {
+  @layouts.Base(data.PageData, AuditContent(data))
+}
+
+templ AuditContent(data view.AuditData) {
+  <section class="panel"><div class="toolbar"><div><div class="eyebrow accent">TRACEABILITY</div><h2>Audit history</h2><p class="panel-note">Append-only events from workflow, account, and administration changes.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Time</th><th>Entity</th><th>Action</th><th>Role</th><th>Reason</th><th>Metadata</th></tr></thead><tbody>
+    for _, event := range data.Events {
+      <tr><td>{ event.CreatedAt }</td><td>{ event.EntityType }</td><td>{ event.Action }</td><td>{ event.ActorRole }</td><td>{ event.Reason }</td><td><code>{ event.Metadata }</code></td></tr>
+    }
+  </tbody></table></div></section>
+}

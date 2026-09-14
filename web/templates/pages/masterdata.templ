@@ -1,0 +1,57 @@
+package templates
+
+import (
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ Inventory(data view.MasterData) {
+  @layouts.Base(data.PageData, InventoryContent(data))
+}
+
+templ InventoryContent(data view.MasterData) {
+  <section class="panel">
+    <div class="toolbar"><div><div class="eyebrow accent">MASTER DATA</div><h2>Inventory master</h2><p class="panel-note">Archive records instead of deleting them; historical passes retain their snapshots.</p></div></div>
+    if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+      <form class="form-grid compact-form" method="post" action="/inventory">
+        <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+        <label>Item code<input name="item_code" required/></label><label>Item name<input name="item_name" required/></label><label>Category<input name="category"/></label><label>Unit<input name="unit" value="NOS"/></label><label>Quantity<input type="number" step="0.001" min="0" name="quantity" value="0"/></label><label>Holder<input name="holder"/></label><div class="form-actions"><button class="button" type="submit">Add inventory item</button></div>
+      </form>
+      <form class="import-form" method="post" action="/inventory/import" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>CSV import<input type="file" name="csv" accept=".csv,text/csv" required/></label><button class="button secondary" type="submit">Validate and import CSV</button><span class="field-note">Columns: item_code,item_name,category,unit,quantity,holder</span></form>
+    }
+  </section>
+  <section class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Unit</th><th>Quantity</th><th>Holder</th><th>Status</th><th></th></tr></thead><tbody>
+    for _, item := range data.Inventory {
+      <tr><td>{ item.Code }</td><td>{ item.Name }</td><td>{ item.Category }</td><td>{ item.Unit }</td><td>{ item.Quantity }</td><td>{ item.Holder }</td><td><span class="status-badge">{ item.Status }</span></td><td>
+        if item.Status == "active" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
+          <form method="post" action={ templ.URL("/inventory/" + item.ID + "/archive") } hx-confirm="Archive this inventory item?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button ghost small" type="submit">Archive</button></form>
+        }
+      </td></tr>
+    }
+  </tbody></table></div></section>
+}
+
+templ Consignees(data view.MasterData) {
+  @layouts.Base(data.PageData, ConsigneesContent(data))
+}
+
+templ ConsigneesContent(data view.MasterData) {
+  <section class="panel">
+    <div class="toolbar"><div><div class="eyebrow accent">MASTER DATA</div><h2>Consignee master</h2><p class="panel-note">Archived consignees cannot be silently reused.</p></div></div>
+    if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+      <form class="form-grid compact-form" method="post" action="/consignees">
+        <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
+        <label>Name<input name="name" required/></label><label>Contact<input name="contact"/></label><label class="field-span-2">Address<input name="address"/></label><div class="form-actions"><button class="button" type="submit">Add consignee</button></div>
+      </form>
+    }
+  </section>
+  <section class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Address</th><th>Contact</th><th>Status</th><th></th></tr></thead><tbody>
+    for _, item := range data.Consignees {
+      <tr><td>{ item.Name }</td><td>{ item.Address }</td><td>{ item.Contact }</td><td><span class="status-badge">{ item.Status }</span></td><td>
+        if item.Status == "active" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
+          <form method="post" action={ templ.URL("/consignees/" + item.ID + "/archive") } hx-confirm="Archive this consignee?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button ghost small" type="submit">Archive</button></form>
+        }
+      </td></tr>
+    }
+  </tbody></table></div></section>
+}

@@ -77,6 +77,26 @@ type UsersData struct {
 	Users []UserRow
 }
 
+type MasterData struct {
+	PageData
+	Inventory  []MasterInventoryRow
+	Consignees []MasterConsigneeRow
+}
+
+type MasterInventoryRow struct{ ID, Code, Name, Category, Unit, Quantity, Holder, Status string }
+type MasterConsigneeRow struct{ ID, Name, Address, Contact, Status string }
+
+type AuditData struct {
+	PageData
+	Events []AuditRow
+}
+type AuditRow struct{ CreatedAt, EntityType, Action, ActorRole, Reason, Metadata string }
+
+type SettingsData struct {
+	PageData
+	OrganizationName, OrganizationAddress, DefaultDirectorate, DefaultProject string
+}
+
 type PageData struct {
 	Title     string
 	Active    string

@@ -12,10 +12,12 @@ templ Base(data view.PageData, content templ.Component) {
   <title>{ data.Title } · MGP Control Room</title>
   <link rel="stylesheet" href="/static/css/tailwind.css"/>
   <link rel="stylesheet" href="/static/css/app.css"/>
+  <link rel="stylesheet" href="/static/css/interaction.css"/>
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/alpine.min.js" defer></script>
 </head>
-<body class="app-body">
+<body class="app-body" hx-boost="true" hx-indicator="#loading-indicator" x-data="{ noticeOpen: true }">
+  <div id="loading-indicator" class="htmx-indicator" role="status" aria-live="polite">Loading…</div>
   <div class="app-shell">
     <aside class="sidebar">
       <div>
@@ -36,7 +38,6 @@ templ Base(data view.PageData, content templ.Component) {
           }
           if data.Role == "ADMIN" {
             <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "users")) } href="/users">User master</a>
-            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "settings")) } href="/settings">Organization</a>
           }
         </nav>
       </div>
@@ -48,10 +49,10 @@ templ Base(data view.PageData, content templ.Component) {
         <div class="operator-card"><span>{ data.UserName }</span><span class="role-chip">{ data.Role }</span><form method="post" action="/logout"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button secondary small" type="submit">Sign out</button></form></div>
       </header>
       if data.Notice != "" {
-        <div class="notice success">{ data.Notice }</div>
+        <div class="notice success" x-show="noticeOpen"><span>{ data.Notice }</span><button class="notice-dismiss" type="button" aria-label="Dismiss notice" x-on:click="noticeOpen = false">×</button></div>
       }
       if data.Error != "" {
-        <div class="notice error">{ data.Error }</div>
+        <div class="notice error" x-show="noticeOpen"><span>{ data.Error }</span><button class="notice-dismiss" type="button" aria-label="Dismiss error" x-on:click="noticeOpen = false">×</button></div>
       }
       @content
     </main>

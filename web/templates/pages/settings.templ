@@ -1,0 +1,16 @@
+package templates
+
+import (
+  "github.com/techmigos/mgp/internal/view"
+  layouts "github.com/techmigos/mgp/web/templates/layouts"
+)
+
+templ Settings(data view.SettingsData) {
+  @layouts.Base(data.PageData, SettingsContent(data))
+}
+
+templ SettingsContent(data view.SettingsData) {
+  <section class="panel narrow-panel"><div class="section-heading"><div><div class="eyebrow accent">ADMINISTRATION</div><h2>Organization settings</h2><p class="panel-note">These defaults help operators create consistent records.</p></div></div>
+    <form class="form-grid" method="post" action="/settings"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label class="field-span-2">Organization name<input name="name" value={ data.OrganizationName } required/></label><label class="field-span-2">Address<textarea name="address" rows="3">{ data.OrganizationAddress }</textarea></label><label>Default directorate<input name="default_directorate" value={ data.DefaultDirectorate }/></label><label>Default project<input name="default_project" value={ data.DefaultProject }/></label><div class="field-span-2 form-actions"><button class="button" type="submit">Save settings</button></div></form>
+  </section>
+}

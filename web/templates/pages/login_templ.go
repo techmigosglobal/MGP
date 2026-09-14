@@ -31,7 +31,7 @@ func Login(data view.PageData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Sign in · MGP Control Room</title><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"></head><body class=\"login-body\"><main class=\"login-card\"><section class=\"login-story\"><div class=\"eyebrow\">MATERIAL MOVEMENT CONTROL</div><h1>Every pass.<br>Every stage.<br>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class=\"story-footer\">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section><form class=\"login-form\" method=\"post\" action=\"/login\"><div><div class=\"eyebrow accent\">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p>Use the role account provisioned by your MGP administrator.</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Sign in · MGP Control Room</title><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><link rel=\"stylesheet\" href=\"/static/css/interaction.css\"><script src=\"/static/js/htmx.min.js\" defer></script><script src=\"/static/js/alpine.min.js\" defer></script></head><body class=\"login-body\" x-data=\"{ submitting: false }\"><main class=\"login-card\"><section class=\"login-story\"><div class=\"eyebrow\">MATERIAL MOVEMENT CONTROL</div><h1>Every pass.<br>Every stage.<br>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class=\"story-footer\">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section><form class=\"login-form\" method=\"post\" action=\"/login\" x-on:submit=\"submitting = true\"><div><div class=\"eyebrow accent\">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p>Use the role account provisioned by your MGP administrator.</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -43,7 +43,7 @@ func Login(data view.PageData) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.Error)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/login.templ`, Line: 21, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/login.templ`, Line: 24, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
