@@ -29,6 +29,7 @@ cp docs/operations/deployment.md "$STAGING_DIR/docs/deployment.md"
 chmod 0750 "$STAGING_DIR/scripts/"*.sh
 
 docker save "$IMAGE" postgres:16-alpine | gzip -n > "$STAGING_DIR/images/mgp-images.tar.gz"
+sha256sum "$STAGING_DIR/images/mgp-images.tar.gz" | sed "s#${STAGING_DIR}/##" > "$STAGING_DIR/SHA256SUMS"
 tar -C "$OUTPUT_DIR" -czf "$ARCHIVE" "MGP-deployment-${VERSION}"
 sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
 

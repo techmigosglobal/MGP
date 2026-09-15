@@ -6,4 +6,5 @@ frontend/dist
 backups
 data
 verification
+dist
 .git
