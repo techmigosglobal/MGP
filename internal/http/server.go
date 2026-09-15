@@ -81,7 +81,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /users", s.users)
 	mux.HandleFunc("POST /users", s.createUser)
 	mux.HandleFunc("POST /users/{id}/status", s.setUserStatus)
-	mux.HandleFunc("POST /users/{id}/reset-password", s.resetUserPassword)
+	mux.HandleFunc("POST /users/{id}/reset-pin", s.resetUserPIN)
 	mux.HandleFunc("GET /inventory", s.inventory)
 	mux.HandleFunc("POST /inventory", s.createInventory)
 	mux.HandleFunc("POST /inventory/import", s.importInventory)
@@ -114,11 +114,21 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login?error=Invalid+form", http.StatusSeeOther)
 		return
 	}
-	user, err := s.Users.FindByEmail(r.Context(), r.FormValue("email"))
-	if err != nil || user.Status != "active" || !auth.VerifyPassword(user.Password, r.FormValue("password")) {
-		http.Redirect(w, r, "/login?error=Invalid+email+or+password", http.StatusSeeOther)
+	username := auth.NormalizeUsername(r.FormValue("username"))
+	pin := r.FormValue("pin")
+	allowed, err := s.Users.LoginAllowed(r.Context(), username)
+	if err != nil {
+		http.Error(w, "authentication unavailable", http.StatusInternalServerError)
 		return
 	}
+	user, findErr := s.Users.FindByUsername(r.Context(), username)
+	valid := allowed && findErr == nil && user.Status == "active" && auth.VerifyPIN(user.PINHash, pin)
+	if !valid {
+		_ = s.Users.RecordLoginFailure(r.Context(), username)
+		http.Redirect(w, r, "/login?error=Invalid+username+or+PIN", http.StatusSeeOther)
+		return
+	}
+	_ = s.Users.ClearLoginFailures(r.Context(), username)
 	session, err := s.Sessions.Create(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, "session unavailable", http.StatusInternalServerError)
@@ -327,7 +337,7 @@ func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	}
 	rows := make([]view.UserRow, 0, len(accounts))
 	for _, account := range accounts {
-		rows = append(rows, view.UserRow{ID: account.ID, Email: account.Email, Name: account.Name, Role: string(account.Role), Status: account.Status})
+		rows = append(rows, view.UserRow{ID: account.ID, Username: account.Username, Name: account.Name, Role: string(account.Role), Status: account.Status})
 	}
 	render(w, r, pages.Users(view.UsersData{PageData: view.PageData{Title: "User master", Active: "users", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, Users: rows}))
 }
@@ -347,10 +357,10 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/users?error=Invalid+role", http.StatusSeeOther)
 		return
 	}
-	hash, err := auth.HashPassword(r.FormValue("password"))
+	hash, err := auth.HashPIN(r.FormValue("pin"))
 	var createdID string
 	if err == nil {
-		createdID, err = s.Users.Create(r.Context(), auth.User{Email: r.FormValue("email"), Name: r.FormValue("name"), Password: hash, Role: role})
+		createdID, err = s.Users.Create(r.Context(), auth.User{Username: r.FormValue("username"), Name: r.FormValue("name"), PINHash: hash, Role: role})
 	}
 	if err == nil {
 		err = s.recordAccountAudit(r.Context(), createdID, "CREATE_USER", admin, string(role))
@@ -384,7 +394,7 @@ func (s *Server) setUserStatus(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users?notice=Account+status+updated", http.StatusSeeOther)
 }
 
-func (s *Server) resetUserPassword(w http.ResponseWriter, r *http.Request) {
+func (s *Server) resetUserPIN(w http.ResponseWriter, r *http.Request) {
 	admin, session, err := s.currentUser(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -394,19 +404,19 @@ func (s *Server) resetUserPassword(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	hash, err := auth.HashPassword(r.FormValue("password"))
+	hash, err := auth.HashPIN(r.FormValue("pin"))
 	if err == nil {
-		err = s.Users.ResetPassword(r.Context(), r.PathValue("id"), hash)
+		err = s.Users.ResetPIN(r.Context(), r.PathValue("id"), hash)
 	}
 	if err != nil {
 		http.Redirect(w, r, "/users?error="+urlQuery(err.Error()), http.StatusSeeOther)
 		return
 	}
-	if err := s.recordAccountAudit(r.Context(), r.PathValue("id"), "RESET_PASSWORD", admin, ""); err != nil {
+	if err := s.recordAccountAudit(r.Context(), r.PathValue("id"), "RESET_PIN", admin, ""); err != nil {
 		http.Error(w, "audit unavailable", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/users?notice=Password+reset", http.StatusSeeOther)
+	http.Redirect(w, r, "/users?notice=PIN+reset", http.StatusSeeOther)
 }
 
 func (s *Server) workflow(w http.ResponseWriter, r *http.Request, action rbac.Action) {

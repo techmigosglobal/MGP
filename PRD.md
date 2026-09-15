@@ -26,7 +26,7 @@ Every decision evaluates `role + action + current state + ownership + separation
 
 ### Authentication and administration
 
-- Local email/password accounts use Argon2id hashes.
+- Local username + six-digit PIN accounts use Argon2id hashes. Login failures are rate-limited and PINs are never displayed.
 - Sessions are server-side, expiring, HttpOnly, SameSite cookies.
 - All authenticated mutations require a session CSRF token.
 - Admins can create, suspend, reset, and assign fixed-role accounts.

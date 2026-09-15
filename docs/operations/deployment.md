@@ -22,15 +22,14 @@ docker compose ps
 curl http://127.0.0.1:8080/health/ready
 ```
 
-Create the first MGP Admin from the server operator shell:
+Create the first MGP Admin from the server operator shell. The provisioning utility is included in the application image, so the server PC does not need Go or direct PostgreSQL access:
 
 ```sh
-MGP_DATABASE_URL='postgres://mgp_app:...@127.0.0.1:5432/mgp?sslmode=disable' \
-MGP_SESSION_KEY='same-value-as-.env' \
-go run ./cmd/mgp-admin -email admin@example.com -name 'MGP Admin' -password 'long-password' -role ADMIN
+docker compose run --rm --entrypoint /usr/local/bin/mgp-admin app \
+  -username admin -name 'MGP Admin' -pin 482617 -role ADMIN
 ```
 
-The command requires the Go source/toolchain. For an offline production server, run it on a controlled administration workstation or provide a separately built provisioning utility. Do not expose PostgreSQL to the LAN; users access only the app port.
+Repeat the command for the other role accounts, using unique six-digit PINs. PINs are not stored in the bundle and should be supplied only from a controlled operator terminal. Do not expose PostgreSQL to the LAN; users access only the app port.
 
 ## Upgrade and rollback
 

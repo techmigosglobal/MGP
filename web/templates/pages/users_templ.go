@@ -76,7 +76,7 @@ func UsersContent(data view.UsersData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"> <label>Name<input name=\"name\" required></label> <label>Email<input type=\"email\" name=\"email\" required></label> <label>Role<select name=\"role\" required><option>INVENTORY</option><option>ISSUING</option><option>SECURITY</option><option>VIEWER</option><option>ADMIN</option></select></label> <label>Temporary password<input type=\"password\" name=\"password\" minlength=\"12\" required></label><div class=\"form-actions\"><button class=\"button\" type=\"submit\">Create account</button></div></form></section><section class=\"panel\"><div class=\"section-heading\"><div><h2>Accounts</h2><p class=\"panel-note\">Suspended accounts are denied at login and on every authenticated request.</p></div></div><div class=\"table-wrap\"><table class=\"data-table\"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"> <label>Name<input name=\"name\" required></label> <label>Username<input name=\"username\" pattern=\"[a-z][a-z0-9._-]{2,31}\" maxlength=\"32\" autocapitalize=\"none\" required></label> <label>Role<select name=\"role\" required><option>INVENTORY</option><option>ISSUING</option><option>SECURITY</option><option>VIEWER</option><option>ADMIN</option></select></label> <label>Initial 6-digit PIN<input type=\"password\" name=\"pin\" inputmode=\"numeric\" pattern=\"[0-9]{6}\" maxlength=\"6\" required></label><div class=\"form-actions\"><button class=\"button\" type=\"submit\">Create account</button></div></form></section><section class=\"panel\"><div class=\"section-heading\"><div><h2>Accounts</h2><p class=\"panel-note\">Suspended accounts are denied at login and on every authenticated request. PINs are never displayed.</p></div></div><div class=\"table-wrap\"><table class=\"data-table\"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,9 +99,9 @@ func UsersContent(data view.UsersData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(user.Email)
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(user.Username)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -114,7 +114,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(user.Role)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 94}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -127,7 +127,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(user.Status)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 152}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 155}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -140,7 +140,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var8 templ.SafeURL
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/users/" + user.ID + "/status"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 269}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 272}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -153,7 +153,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.CSRFToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 333}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 336}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 			if templ_7745c5c3_Err != nil {
@@ -166,7 +166,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(userStatusToggle(user.Status))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 409}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 412}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 			if templ_7745c5c3_Err != nil {
@@ -179,7 +179,7 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(userStatusLabel(user.Status))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 492}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 495}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -190,9 +190,9 @@ func UsersContent(data view.UsersData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 templ.SafeURL
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/users/" + user.ID + "/reset-password"))
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/users/" + user.ID + "/reset-pin"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 589}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 587}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -205,13 +205,13 @@ func UsersContent(data view.UsersData) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.CSRFToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 653}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/users.templ`, Line: 26, Col: 651}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><input class=\"small-input\" name=\"password\" type=\"password\" minlength=\"12\" placeholder=\"New password\" required><button class=\"button ghost small\" type=\"submit\">Reset</button></form></div></td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><input class=\"small-input\" name=\"pin\" type=\"password\" inputmode=\"numeric\" pattern=\"[0-9]{6}\" maxlength=\"6\" placeholder=\"New 6-digit PIN\" required><button class=\"button ghost small\" type=\"submit\">Reset PIN</button></form></div></td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -23,8 +23,8 @@ templ Login(data view.PageData) {
       if data.Error != "" {
         <div class="notice error">{ data.Error }</div>
       }
-      <label>Email<input type="email" name="email" autocomplete="username" required/></label>
-      <label>Password<input type="password" name="password" autocomplete="current-password" required/></label>
+      <label>Username<input type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required/></label>
+      <label>6-digit PIN<input type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required/></label>
       <button class="button" type="submit">Sign in</button>
     </form>
   </main>

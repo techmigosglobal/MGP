@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,13 +16,16 @@ import (
 )
 
 func main() {
-	email := flag.String("email", "", "account email")
-	name := flag.String("name", "", "display name")
-	password := flag.String("password", "", "temporary password; change it before operational use")
+	username := flag.String("username", "", "account username")
+	name := flag.String("name", "", "display name; required for a new account")
+	pin := flag.String("pin", "", "six-digit PIN")
 	role := flag.String("role", string(rbac.RoleAdmin), "ADMIN, INVENTORY, ISSUING, SECURITY, or VIEWER")
 	flag.Parse()
-	if *email == "" || *name == "" || *password == "" {
-		log.Fatal("-email, -name, and -password are required")
+	if *username == "" || *pin == "" {
+		log.Fatal("-username and -pin are required")
+	}
+	if err := auth.ValidateUsername(*username); err != nil {
+		log.Fatal(err)
 	}
 	parsedRole := rbac.Role(*role)
 	if parsedRole != rbac.RoleAdmin && parsedRole != rbac.RoleInventory && parsedRole != rbac.RoleIssuing && parsedRole != rbac.RoleSecurity && parsedRole != rbac.RoleViewer {
@@ -38,13 +43,31 @@ func main() {
 	if err := database.Migrate(context.Background(), db); err != nil {
 		log.Fatal(err)
 	}
-	hash, err := auth.HashPassword(*password)
+	hash, err := auth.HashPIN(*pin)
 	if err != nil {
 		log.Fatal(err)
 	}
-	id, err := (auth.UserStore{DB: db}).Create(context.Background(), auth.User{Email: *email, Name: *name, Password: hash, Role: parsedRole})
+	store := auth.UserStore{DB: db}
+	existing, findErr := store.FindByUsername(context.Background(), *username)
+	if findErr == nil {
+		if existing.Role != parsedRole {
+			log.Fatalf("existing username %q belongs to role %s", *username, existing.Role)
+		}
+		if err := store.ResetPIN(context.Background(), existing.ID, hash); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "reset PIN for %s account %s (%s)\n", parsedRole, auth.NormalizeUsername(*username), existing.ID)
+		return
+	}
+	if !errors.Is(findErr, sql.ErrNoRows) {
+		log.Fatal(findErr)
+	}
+	if *name == "" {
+		log.Fatal("-name is required when creating a new account")
+	}
+	id, err := store.Create(context.Background(), auth.User{Username: *username, Name: *name, PINHash: hash, Role: parsedRole})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(os.Stdout, "created %s account %s (%s)\n", parsedRole, *email, id)
+	fmt.Fprintf(os.Stdout, "created %s account %s (%s)\n", parsedRole, auth.NormalizeUsername(*username), id)
 }

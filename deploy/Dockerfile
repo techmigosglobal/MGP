@@ -12,10 +12,12 @@ RUN go mod download
 COPY . ./
 COPY --from=assets /src/web/static/ ./web/static/
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/mgp-server ./cmd/mgp-server
+RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/mgp-admin ./cmd/mgp-admin
 
 FROM alpine:3.22
 RUN addgroup -S mgp && adduser -S -G mgp mgp && apk add --no-cache ca-certificates wget
 COPY --from=build /out/mgp-server /usr/local/bin/mgp-server
+COPY --from=build /out/mgp-admin /usr/local/bin/mgp-admin
 RUN mkdir -p /var/lib/mgp/documents && chown -R mgp:mgp /var/lib/mgp
 USER mgp
 ENV MGP_ADDR=:8080 MGP_DOCUMENT_DIR=/var/lib/mgp/documents

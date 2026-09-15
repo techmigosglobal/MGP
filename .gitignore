@@ -5,3 +5,4 @@ backups/
 frontend/.cache/
 node_modules/
 /bin/
+/dist/

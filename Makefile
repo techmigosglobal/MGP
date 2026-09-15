@@ -3,7 +3,7 @@ SHELL := /bin/sh
 APP := mgp-server
 TEMPL_VERSION := v0.3.1020
 
-.PHONY: generate assets dev test lint build docker
+.PHONY: generate assets dev test lint build docker package
 
 generate:
 	go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate
@@ -27,3 +27,6 @@ build: generate assets
 
 docker:
 	docker build -f deploy/Dockerfile -t mgp:local .
+
+package:
+	sh deploy/package-offline.sh

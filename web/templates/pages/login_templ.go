@@ -54,7 +54,7 @@ func Login(data view.PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<label>Email<input type=\"email\" name=\"email\" autocomplete=\"username\" required></label> <label>Password<input type=\"password\" name=\"password\" autocomplete=\"current-password\" required></label> <button class=\"button\" type=\"submit\">Sign in</button></form></main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<label>Username<input type=\"text\" name=\"username\" autocomplete=\"username\" autocapitalize=\"none\" spellcheck=\"false\" required></label> <label>6-digit PIN<input type=\"password\" name=\"pin\" inputmode=\"numeric\" pattern=\"[0-9]{6}\" maxlength=\"6\" autocomplete=\"one-time-code\" required></label> <button class=\"button\" type=\"submit\">Sign in</button></form></main></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

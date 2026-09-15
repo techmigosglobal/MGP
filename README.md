@@ -7,7 +7,7 @@ MGP is an offline-LAN material gate-pass control system for one site and approxi
 - Go modular monolith with `net/http` and PostgreSQL.
 - `templ` server-rendered HTML, HTMX for partial interactions, Alpine.js for local UI state, and TailwindCSS for generated utilities/design tokens.
 - Docker Compose with PostgreSQL and a prebuilt application image.
-- Local accounts with Argon2id password hashes, database-backed sessions, CSRF protection, and backend-authoritative RBAC.
+- Local username + six-digit PIN accounts with Argon2id hashes, database-backed sessions, CSRF protection, login throttling, and backend-authoritative RBAC.
 
 ## Development
 
@@ -33,7 +33,7 @@ make dev
 Create the first application account after PostgreSQL is ready:
 
 ```sh
-go run ./cmd/mgp-admin -email admin@example.com -name "MGP Admin" -password 'use-a-long-password' -role ADMIN
+go run ./cmd/mgp-admin -username admin -name "MGP Admin" -pin 482617 -role ADMIN
 ```
 
 `mgp-admin` is a deployment/operator command. It is separate from the permissions of an MGP ADMIN account inside the application.

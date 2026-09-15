@@ -67,11 +67,11 @@ type DetailData struct {
 }
 
 type UserRow struct {
-	ID     string
-	Email  string
-	Name   string
-	Role   string
-	Status string
+	ID       string
+	Username string
+	Name     string
+	Role     string
+	Status   string
 }
 
 type UsersData struct {
