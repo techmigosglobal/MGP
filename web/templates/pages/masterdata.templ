@@ -5,51 +5,43 @@ import (
   layouts "github.com/techmigos/mgp/web/templates/layouts"
 )
 
-templ Inventory(data view.MasterData) {
-  @layouts.Base(data.PageData, InventoryContent(data))
-}
-
+templ Inventory(data view.MasterData) { @layouts.Base(data.PageData, InventoryContent(data)) }
 templ InventoryContent(data view.MasterData) {
-  <section class="panel">
-    <div class="toolbar"><div><div class="eyebrow accent">MASTER DATA</div><h2>Inventory master</h2><p class="panel-note">Archive records instead of deleting them; historical passes retain their snapshots.</p></div></div>
+  <div class="page-intro"><div><div class="section-kicker">MASTER DATA</div><h2>Inventory master</h2><p class="muted">Maintain the material catalogue used by gate-pass operators. Archive instead of deleting.</p></div></div>
+  if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+    <section class="card"><div class="card-heading"><div><div class="section-kicker">NEW MATERIAL</div><h3>Add inventory item</h3></div></div><form class="form-grid cols-4" method="post" action="/inventory"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><div class="field"><label>Item code</label><input class="input" name="item_code" required/></div><div class="field"><label>Item name</label><input class="input" name="item_name" required/></div><div class="field"><label>Category</label><input class="input" name="category"/></div><div class="field"><label>Serial number</label><input class="input" name="serial_no"/></div><div class="field"><label>Batch number</label><input class="input" name="batch_no"/></div><div class="field"><label>Unit of measure</label><input class="input" name="unit" value="NOS"/></div><div class="field"><label>Quantity</label><input class="input" type="number" step=".001" min="0" name="quantity" value="0"/></div><div class="field"><label>Holder</label><input class="input" name="holder"/></div><div class="field span-2"><label>Description</label><input class="input" name="description"/></div><div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">Add item</button></div></form></section>
+    <section class="card"><div class="card-heading"><div><div class="section-kicker">BULK OPERATIONS</div><h3>CSV import</h3></div></div><form class="filter-bar" method="post" action="/inventory/import" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input class="input" type="file" name="csv" accept=".csv,text/csv" required/><button class="btn btn-secondary" type="submit">Validate and import</button></form><p class="muted">Columns: item_code,item_name,category,serial_no,batch_no,unit,quantity,holder,description</p></section>
+  }
+  <section class="card"><div class="card-heading"><div><div class="section-kicker">CATALOGUE</div><h3>Inventory records</h3></div>
     if data.Role == "ADMIN" || data.Role == "INVENTORY" {
-      <form class="form-grid compact-form" method="post" action="/inventory">
-        <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
-        <label>Item code<input name="item_code" required/></label><label>Item name<input name="item_name" required/></label><label>Category<input name="category"/></label><label>Unit<input name="unit" value="NOS"/></label><label>Quantity<input type="number" step="0.001" min="0" name="quantity" value="0"/></label><label>Holder<input name="holder"/></label><div class="form-actions"><button class="button" type="submit">Add inventory item</button></div>
-      </form>
-      <form class="import-form" method="post" action="/inventory/import" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><label>CSV import<input type="file" name="csv" accept=".csv,text/csv" required/></label><button class="button secondary" type="submit">Validate and import CSV</button><span class="field-note">Columns: item_code,item_name,category,unit,quantity,holder</span></form>
+      <a class="btn btn-secondary btn-sm" href="/inventory/export">Export CSV</a>
     }
-  </section>
-  <section class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Unit</th><th>Quantity</th><th>Holder</th><th>Status</th><th></th></tr></thead><tbody>
+  </div><div class="table-scroll"><table class="data-table"><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Serial / batch</th><th>U/M</th><th>Qty</th><th>Holder</th><th>Status</th><th></th></tr></thead><tbody>
     for _, item := range data.Inventory {
-      <tr><td>{ item.Code }</td><td>{ item.Name }</td><td>{ item.Category }</td><td>{ item.Unit }</td><td>{ item.Quantity }</td><td>{ item.Holder }</td><td><span class="status-badge">{ item.Status }</span></td><td>
+      <tr><td>{ item.Code }</td><td><strong>{ item.Name }</strong></td><td>{ item.Category }</td><td>{ item.SerialNo }<br/>{ item.BatchNo }</td><td>{ item.Unit }</td><td>{ item.Quantity }</td><td>{ item.Holder }</td><td><span class="badge badge-slate">{ item.Status }</span></td><td>
         if item.Status == "active" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
-          <form method="post" action={ templ.URL("/inventory/" + item.ID + "/archive") } hx-confirm="Archive this inventory item?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button ghost small" type="submit">Archive</button></form>
+          <form method="post" action={ templ.URL("/inventory/" + item.ID + "/archive") } hx-confirm="Archive this item?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="btn btn-ghost btn-sm" type="submit">Archive</button></form>
         }
       </td></tr>
     }
   </tbody></table></div></section>
 }
 
-templ Consignees(data view.MasterData) {
-  @layouts.Base(data.PageData, ConsigneesContent(data))
-}
-
+templ Consignees(data view.MasterData) { @layouts.Base(data.PageData, ConsigneesContent(data)) }
 templ ConsigneesContent(data view.MasterData) {
-  <section class="panel">
-    <div class="toolbar"><div><div class="eyebrow accent">MASTER DATA</div><h2>Consignee master</h2><p class="panel-note">Archived consignees cannot be silently reused.</p></div></div>
+  <div class="page-intro"><div><div class="section-kicker">MASTER DATA</div><h2>Consignee master</h2><p class="muted">Keep receiving-party information consistent across the register.</p></div></div>
+  if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+    <section class="card"><div class="card-heading"><div><div class="section-kicker">NEW CONSIGNEE</div><h3>Add consignee</h3></div></div><form class="form-grid cols-3" method="post" action="/consignees"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><div class="field"><label>Name</label><input class="input" name="name" required/></div><div class="field"><label>Contact</label><input class="input" name="contact"/></div><div class="field"><label>Address</label><input class="input" name="address"/></div><div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">Add consignee</button></div></form></section>
+  }
+  <section class="card"><div class="card-heading"><div><div class="section-kicker">DIRECTORY</div><h3>Consignee records</h3></div>
     if data.Role == "ADMIN" || data.Role == "INVENTORY" {
-      <form class="form-grid compact-form" method="post" action="/consignees">
-        <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
-        <label>Name<input name="name" required/></label><label>Contact<input name="contact"/></label><label class="field-span-2">Address<input name="address"/></label><div class="form-actions"><button class="button" type="submit">Add consignee</button></div>
-      </form>
+      <a class="btn btn-secondary btn-sm" href="/consignees/export">Export CSV</a>
     }
-  </section>
-  <section class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Address</th><th>Contact</th><th>Status</th><th></th></tr></thead><tbody>
+  </div><div class="table-scroll"><table class="data-table"><thead><tr><th>Name</th><th>Address</th><th>Contact</th><th>Status</th><th></th></tr></thead><tbody>
     for _, item := range data.Consignees {
-      <tr><td>{ item.Name }</td><td>{ item.Address }</td><td>{ item.Contact }</td><td><span class="status-badge">{ item.Status }</span></td><td>
+      <tr><td><strong>{ item.Name }</strong></td><td>{ item.Address }</td><td>{ item.Contact }</td><td><span class="badge badge-slate">{ item.Status }</span></td><td>
         if item.Status == "active" && (data.Role == "ADMIN" || data.Role == "INVENTORY") {
-          <form method="post" action={ templ.URL("/consignees/" + item.ID + "/archive") } hx-confirm="Archive this consignee?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button ghost small" type="submit">Archive</button></form>
+          <form method="post" action={ templ.URL("/consignees/" + item.ID + "/archive") } hx-confirm="Archive this consignee?"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="btn btn-ghost btn-sm" type="submit">Archive</button></form>
         }
       </td></tr>
     }

@@ -10,18 +10,22 @@ import (
 )
 
 type User struct {
-	ID       string
-	Username string
-	Name     string
-	PINHash  string
-	Role     rbac.Role
-	Status   string
+	ID              string
+	Username        string
+	Name            string
+	PINHash         string
+	Role            rbac.Role
+	Status          string
+	Rank            string
+	Phone           string
+	SignaturePath   string
+	SignatureSHA256 string
 }
 
 type UserStore struct{ DB *sql.DB }
 
 func (s UserStore) List(ctx context.Context) ([]User, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status FROM users ORDER BY name`)
+	rows, err := s.DB.QueryContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status,rank,phone,signature_path,signature_sha256 FROM users ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +33,7 @@ func (s UserStore) List(ctx context.Context) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var user User
-		if err := rows.Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status, &user.Rank, &user.Phone, &user.SignaturePath, &user.SignatureSHA256); err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -72,7 +76,7 @@ func (s UserStore) ResetPIN(ctx context.Context, id, pinHash string) error {
 
 func (s UserStore) FindByUsername(ctx context.Context, username string) (User, error) {
 	var user User
-	err := s.DB.QueryRowContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status FROM users WHERE lower(username)=lower($1)`, NormalizeUsername(username)).Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status)
+	err := s.DB.QueryRowContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status,rank,phone,signature_path,signature_sha256 FROM users WHERE lower(username)=lower($1)`, NormalizeUsername(username)).Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status, &user.Rank, &user.Phone, &user.SignaturePath, &user.SignatureSHA256)
 	if err != nil {
 		return User{}, err
 	}
@@ -81,7 +85,7 @@ func (s UserStore) FindByUsername(ctx context.Context, username string) (User, e
 
 func (s UserStore) FindByID(ctx context.Context, id string) (User, error) {
 	var user User
-	err := s.DB.QueryRowContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status FROM users WHERE id=$1`, id).Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status)
+	err := s.DB.QueryRowContext(ctx, `SELECT id,COALESCE(username,''),name,COALESCE(pin_hash,''),role,status,rank,phone,signature_path,signature_sha256 FROM users WHERE id=$1`, id).Scan(&user.ID, &user.Username, &user.Name, &user.PINHash, &user.Role, &user.Status, &user.Rank, &user.Phone, &user.SignaturePath, &user.SignatureSHA256)
 	if err != nil {
 		return User{}, err
 	}
@@ -97,6 +101,11 @@ func (s UserStore) Create(ctx context.Context, user User) (string, error) {
 		return "", fmt.Errorf("username, name, and PIN are required")
 	}
 	var id string
-	err := s.DB.QueryRowContext(ctx, `INSERT INTO users(username,name,pin_hash,role,status) VALUES($1,$2,$3,$4,$5) RETURNING id`, user.Username, strings.TrimSpace(user.Name), user.PINHash, user.Role, "active").Scan(&id)
+	err := s.DB.QueryRowContext(ctx, `INSERT INTO users(username,name,pin_hash,role,status,rank,phone,signature_path,signature_sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`, user.Username, strings.TrimSpace(user.Name), user.PINHash, user.Role, "active", strings.TrimSpace(user.Rank), strings.TrimSpace(user.Phone), strings.TrimSpace(user.SignaturePath), strings.TrimSpace(user.SignatureSHA256)).Scan(&id)
 	return id, err
+}
+
+func (s UserStore) UpdateSignature(ctx context.Context, id, path, checksum string) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE users SET signature_path=$1,signature_sha256=$2,updated_at=now() WHERE id=$3`, path, checksum, id)
+	return err
 }

@@ -2,15 +2,18 @@ package httpserver
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/csv"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -73,6 +76,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /gate-passes/{id}", s.updateGatePass)
 	mux.HandleFunc("GET /gate-passes/{id}", s.gatePassDetail)
 	mux.HandleFunc("GET /gate-passes/{id}/pdf", s.passPDF)
+	mux.HandleFunc("POST /gate-passes/{id}/revision", s.createRevision)
 	mux.HandleFunc("POST /gate-passes/{id}/submit", s.submitGatePass)
 	mux.HandleFunc("POST /gate-passes/{id}/approve", s.approveGatePass)
 	mux.HandleFunc("POST /gate-passes/{id}/reject", s.rejectGatePass)
@@ -83,14 +87,17 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /users/{id}/status", s.setUserStatus)
 	mux.HandleFunc("POST /users/{id}/reset-pin", s.resetUserPIN)
 	mux.HandleFunc("GET /inventory", s.inventory)
+	mux.HandleFunc("GET /inventory/export", s.exportInventory)
 	mux.HandleFunc("POST /inventory", s.createInventory)
 	mux.HandleFunc("POST /inventory/import", s.importInventory)
 	mux.HandleFunc("POST /inventory/{id}/archive", s.archiveInventory)
 	mux.HandleFunc("GET /consignees", s.consignees)
+	mux.HandleFunc("GET /consignees/export", s.exportConsignees)
 	mux.HandleFunc("POST /consignees", s.createConsignee)
 	mux.HandleFunc("POST /consignees/{id}/archive", s.archiveConsignee)
 	mux.HandleFunc("GET /reports", s.reports)
 	mux.HandleFunc("GET /audit", s.auditLog)
+	mux.HandleFunc("GET /audit/export", s.exportAudit)
 	mux.HandleFunc("GET /settings", s.settings)
 	mux.HandleFunc("POST /settings", s.updateSettings)
 	return middleware.SecurityHeaders(logging(s.Logger, mux))
@@ -106,7 +113,7 @@ func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
-	render(w, r, pages.Login(view.PageData{Title: "Sign in", Error: r.URL.Query().Get("error")}))
+	render(w, r, pages.Login(view.PageData{Title: "Sign in", Error: r.URL.Query().Get("error"), TestCredentials: s.Config.ShowTestCredentials}))
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -174,12 +181,13 @@ func (s *Server) gatePasses(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	rows, err := s.Passes.ListRows(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, 200)
+	search, statusFilter, typeFilter := r.URL.Query().Get("q"), r.URL.Query().Get("status"), r.URL.Query().Get("type")
+	rows, err := s.Passes.ListRowsFiltered(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, 200, search, statusFilter, typeFilter)
 	if err != nil {
 		http.Error(w, "could not load gate passes", http.StatusInternalServerError)
 		return
 	}
-	render(w, r, pages.GatePasses(view.PageData{Title: "Gate-pass register", Active: "passes", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Passes: rows, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}))
+	render(w, r, pages.GatePasses(view.PageData{Title: "Gate-pass register", Active: "passes", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Passes: rows, Search: search, StatusFilter: statusFilter, TypeFilter: typeFilter, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}))
 }
 
 func (s *Server) newGatePass(w http.ResponseWriter, r *http.Request) {
@@ -192,15 +200,22 @@ func (s *Server) newGatePass(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	data := view.NewPassData{PageData: view.PageData{Title: "Create gate pass", Active: "create", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken}, PassDate: time.Now().Format("2006-01-02"), ItemUnit: "NOS", ItemQuantity: "1"}
+	data := view.NewPassData{PageData: view.PageData{Title: "Create gate pass", Active: "create", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken}, PassType: string(gatepass.PassTypeReturnable), PassDate: time.Now().Format("2006-01-02"), CopyType: "ORIGINAL", Packages: "1", Items: []view.PassFormItem{{Unit: "NOS", Quantity: "1", FullPart: "Full Item"}}}
+	if organization, settingsErr := s.Settings.Get(r.Context()); settingsErr == nil {
+		data.Directorate, data.Project, data.CopyType = organization.DefaultDirectorate, organization.DefaultProject, organization.DefaultCopy
+	}
 	if revisionOf := strings.TrimSpace(r.URL.Query().Get("revision")); revisionOf != "" {
 		if detail, findErr := s.Passes.FindByPassNo(r.Context(), revisionOf); findErr == nil && detail.Status == string(gatepass.StatusNotApproved) {
 			data.RevisionOf = revisionOf
 			data.PassType = detail.PassType
-			data.Directorate, data.Project, data.ConsigneeName = detail.Directorate, detail.Project, detail.Consignee
+			data.PassType, data.Directorate, data.Project, data.ConsigneeName = detail.PassType, detail.Directorate, detail.Project, detail.Consignee
+			data.ConsigneeAddress, data.ReferenceNo = detail.ConsigneeAddress, detail.ReferenceNo
 			data.Packages, data.Purpose, data.Authority = strconv.Itoa(detail.Packages), detail.Purpose, detail.Authority
-			if len(detail.Items) > 0 {
-				data.ItemCode, data.ItemName, data.ItemUnit, data.ItemQuantity = detail.Items[0].Code, detail.Items[0].Name, detail.Items[0].Unit, detail.Items[0].Quantity
+			data.InventoryNo, data.InventoryHolder, data.VehicleNo = detail.InventoryNo, detail.InventoryHolder, detail.VehicleNo
+			data.LoadedInPresenceOf, data.CarrierName, data.CarrierDesignation, data.Remarks, data.CopyType = detail.LoadedInPresenceOf, detail.CarrierName, detail.CarrierDesignation, detail.Remarks, detail.CopyType
+			data.ExpectedReturnDate = detail.ExpectedReturnDateISO
+			for _, item := range detail.Items {
+				data.Items = append(data.Items, view.PassFormItem{Code: item.Code, Name: item.Name, Category: item.Category, SerialNo: item.SerialNo, BatchNo: item.BatchNo, FullPart: item.FullPart, Unit: item.Unit, Quantity: item.Quantity, Description: item.Description})
 			}
 		}
 	}
@@ -217,14 +232,18 @@ func (s *Server) createGatePass(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusForbidden)
 		return
 	}
-	data := view.NewPassData{PageData: view.PageData{Title: "Create gate pass", Active: "create", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken}, RevisionOf: r.FormValue("revision_of"), PassType: r.FormValue("pass_type"), PassDate: r.FormValue("pass_date"), ExpectedReturnDate: r.FormValue("expected_return_date"), Directorate: r.FormValue("directorate"), Project: r.FormValue("project"), ConsigneeName: r.FormValue("consignee_name"), Packages: r.FormValue("packages"), Purpose: r.FormValue("purpose"), Authority: r.FormValue("authority"), ItemCode: r.FormValue("item_code"), ItemName: r.FormValue("item_name"), ItemUnit: r.FormValue("item_unit"), ItemQuantity: r.FormValue("item_quantity")}
+	data := passDataFromRequest(r, view.PageData{Title: "Create gate pass", Active: "create", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken})
 	draft, err := draftFromForm(data)
 	if err == nil {
 		actor := rbac.Actor{ID: user.ID, Role: user.Role}
 		if data.RevisionOf != "" {
 			_, err = s.Passes.CreateRevision(r.Context(), actor, data.RevisionOf, draft)
 		} else {
-			_, err = s.Passes.CreateDraft(r.Context(), actor, draft)
+			var createdID string
+			createdID, err = s.Passes.CreateDraft(r.Context(), actor, draft)
+			if err == nil && r.FormValue("submit_after_save") == "true" {
+				err = s.Passes.TransitionByID(r.Context(), actor, createdID, rbac.ActionSubmit, "")
+			}
 		}
 	}
 	if err != nil {
@@ -245,7 +264,7 @@ func (s *Server) updateGatePass(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusForbidden)
 		return
 	}
-	data := view.NewPassData{PassType: r.FormValue("pass_type"), PassDate: r.FormValue("pass_date"), ExpectedReturnDate: r.FormValue("expected_return_date"), Directorate: r.FormValue("directorate"), Project: r.FormValue("project"), ConsigneeName: r.FormValue("consignee_name"), Packages: r.FormValue("packages"), Purpose: r.FormValue("purpose"), Authority: r.FormValue("authority"), ItemCode: r.FormValue("item_code"), ItemName: r.FormValue("item_name"), ItemUnit: r.FormValue("item_unit"), ItemQuantity: r.FormValue("item_quantity")}
+	data := passDataFromRequest(r, view.PageData{Title: "Edit gate pass", Active: "passes", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken})
 	draft, err := draftFromForm(data)
 	if err == nil {
 		err = s.Passes.UpdateDraft(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, r.PathValue("id"), draft)
@@ -286,17 +305,26 @@ func (s *Server) passPDF(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	draftMode := r.URL.Query().Get("draft") == "true"
+	if !draftMode && detail.Status != string(gatepass.StatusApproved) && detail.Status != string(gatepass.StatusPassedOut) && detail.Status != string(gatepass.StatusReturned) {
+		http.Error(w, "official PDF is available only after approval", http.StatusForbidden)
+		return
+	}
 	if user.Role == rbac.RoleSecurity && detail.Status != string(gatepass.StatusApproved) && detail.Status != string(gatepass.StatusPassedOut) && detail.Status != string(gatepass.StatusReturned) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	path, _, err := s.Documents.GeneratePassPDF(r.Context(), detail, rbac.Actor{ID: user.ID, Role: user.Role})
+	path, _, err := s.Documents.GeneratePassPDF(r.Context(), detail, rbac.Actor{ID: user.ID, Role: user.Role}, draftMode)
 	if err != nil {
 		http.Error(w, "could not generate document", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `inline; filename="`+detail.PassNo+`.pdf"`)
+	filename := detail.PassNo + ".pdf"
+	if draftMode {
+		filename = detail.PassNo + "-draft.pdf"
+	}
+	w.Header().Set("Content-Disposition", `inline; filename="`+filename+`"`)
 	http.ServeFile(w, r, path)
 }
 
@@ -320,6 +348,29 @@ func (s *Server) returnGatePass(w http.ResponseWriter, r *http.Request) {
 	s.workflow(w, r, rbac.ActionReturn)
 }
 
+func (s *Server) createRevision(w http.ResponseWriter, r *http.Request) {
+	user, session, err := s.currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if !validCSRF(r, session) {
+		http.Error(w, "invalid request", http.StatusForbidden)
+		return
+	}
+	data := passDataFromRequest(r, view.PageData{Title: "Create revision", Active: "passes", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken})
+	original := strings.TrimSpace(r.PathValue("id"))
+	draft, err := draftFromForm(data)
+	if err == nil {
+		_, err = s.Passes.CreateRevision(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, original, draft)
+	}
+	if err != nil {
+		http.Redirect(w, r, "/gate-passes/"+original+"?error="+urlQuery(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/gate-passes?notice=Revision+created", http.StatusSeeOther)
+}
+
 func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	user, session, err := s.currentUser(r)
 	if err != nil {
@@ -337,7 +388,7 @@ func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	}
 	rows := make([]view.UserRow, 0, len(accounts))
 	for _, account := range accounts {
-		rows = append(rows, view.UserRow{ID: account.ID, Username: account.Username, Name: account.Name, Role: string(account.Role), Status: account.Status})
+		rows = append(rows, view.UserRow{ID: account.ID, Username: account.Username, Name: account.Name, Role: string(account.Role), Status: account.Status, Rank: account.Rank, Phone: account.Phone, SignaturePath: account.SignaturePath})
 	}
 	render(w, r, pages.Users(view.UsersData{PageData: view.PageData{Title: "User master", Active: "users", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, Users: rows}))
 }
@@ -352,6 +403,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	_ = r.ParseMultipartForm(8 << 20)
 	role := rbac.Role(strings.TrimSpace(r.FormValue("role")))
 	if role != rbac.RoleAdmin && role != rbac.RoleInventory && role != rbac.RoleIssuing && role != rbac.RoleSecurity && role != rbac.RoleViewer {
 		http.Redirect(w, r, "/users?error=Invalid+role", http.StatusSeeOther)
@@ -360,7 +412,33 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	hash, err := auth.HashPIN(r.FormValue("pin"))
 	var createdID string
 	if err == nil {
-		createdID, err = s.Users.Create(r.Context(), auth.User{Username: r.FormValue("username"), Name: r.FormValue("name"), PINHash: hash, Role: role})
+		createdID, err = s.Users.Create(r.Context(), auth.User{Username: r.FormValue("username"), Name: r.FormValue("name"), Rank: r.FormValue("rank"), Phone: r.FormValue("phone"), PINHash: hash, Role: role})
+		if err == nil {
+			if file, header, fileErr := r.FormFile("signature"); fileErr == nil {
+				defer file.Close()
+				directory := filepath.Join(s.Config.DocumentDir, "signatures")
+				if mkdirErr := os.MkdirAll(directory, 0o750); mkdirErr != nil {
+					err = mkdirErr
+				} else {
+					content, readErr := io.ReadAll(io.LimitReader(file, 2<<20))
+					if readErr != nil {
+						err = readErr
+					} else {
+						ext := filepath.Ext(header.Filename)
+						if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+							ext = ".img"
+						}
+						path := filepath.Join(directory, createdID+ext)
+						if writeErr := os.WriteFile(path, content, 0o640); writeErr != nil {
+							err = writeErr
+						} else {
+							digest := sha256.Sum256(content)
+							err = s.Users.UpdateSignature(r.Context(), createdID, path, hex.EncodeToString(digest[:]))
+						}
+					}
+				}
+			}
+		}
 	}
 	if err == nil {
 		err = s.recordAccountAudit(r.Context(), createdID, "CREATE_USER", admin, string(role))
@@ -477,10 +555,6 @@ func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	if user.Role != rbac.RoleAdmin && user.Role != rbac.RoleIssuing {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
 	events, err := s.Audit.Recent(r.Context(), 200)
 	if err != nil {
 		http.Error(w, "could not load audit history", http.StatusInternalServerError)
@@ -508,7 +582,7 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not load settings", http.StatusInternalServerError)
 		return
 	}
-	render(w, r, pages.Settings(view.SettingsData{PageData: view.PageData{Title: "Organization settings", Active: "settings", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, OrganizationName: organization.Name, OrganizationAddress: organization.Address, DefaultDirectorate: organization.DefaultDirectorate, DefaultProject: organization.DefaultProject}))
+	render(w, r, pages.Settings(view.SettingsData{PageData: view.PageData{Title: "Organization settings", Active: "settings", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, ApplicationName: organization.ApplicationName, OrganizationName: organization.Name, OrganizationAddress: organization.Address, DefaultDirectorate: organization.DefaultDirectorate, DefaultProject: organization.DefaultProject, DefaultCopy: organization.DefaultCopy, AllowManualPassNo: organization.AllowManualPassNo, SessionMinutes: organization.SessionMinutes, Logo: organization.Logo}))
 }
 
 func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request) {
@@ -521,7 +595,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	err = s.Settings.Update(r.Context(), config.Organization{Name: r.FormValue("name"), Address: r.FormValue("address"), DefaultDirectorate: r.FormValue("default_directorate"), DefaultProject: r.FormValue("default_project")})
+	err = s.Settings.Update(r.Context(), config.Organization{ApplicationName: r.FormValue("app_title"), Name: r.FormValue("name"), Address: r.FormValue("address"), DefaultDirectorate: r.FormValue("default_directorate"), DefaultProject: r.FormValue("default_project"), DefaultCopy: r.FormValue("default_copy"), AllowManualPassNo: r.FormValue("allow_manual_pass_no"), SessionMinutes: r.FormValue("session_minutes"), Logo: r.FormValue("logo")})
 	if err != nil {
 		http.Redirect(w, r, "/settings?error="+urlQuery(err.Error()), http.StatusSeeOther)
 		return
@@ -546,7 +620,7 @@ func (s *Server) inventory(w http.ResponseWriter, r *http.Request) {
 	}
 	rows := make([]view.MasterInventoryRow, 0, len(items))
 	for _, item := range items {
-		rows = append(rows, view.MasterInventoryRow{ID: item.ID, Code: item.Code, Name: item.Name, Category: item.Category, Unit: item.Unit, Quantity: item.Quantity, Holder: item.Holder, Status: item.Status})
+		rows = append(rows, view.MasterInventoryRow{ID: item.ID, Code: item.Code, Name: item.Name, Category: item.Category, SerialNo: item.SerialNo, BatchNo: item.BatchNo, Unit: item.Unit, Quantity: item.Quantity, Holder: item.Holder, Description: item.Description, Status: item.Status})
 	}
 	render(w, r, pages.Inventory(view.MasterData{PageData: view.PageData{Title: "Inventory master", Active: "inventory", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken, Notice: r.URL.Query().Get("notice"), Error: r.URL.Query().Get("error")}, Inventory: rows}))
 }
@@ -561,7 +635,7 @@ func (s *Server) createInventory(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	if _, err := s.Master.CreateInventory(r.Context(), masterdata.InventoryItem{Code: r.FormValue("item_code"), Name: r.FormValue("item_name"), Category: r.FormValue("category"), Unit: r.FormValue("unit"), Quantity: r.FormValue("quantity"), Holder: r.FormValue("holder")}); err != nil {
+	if _, err := s.Master.CreateInventory(r.Context(), masterdata.InventoryItem{Code: r.FormValue("item_code"), Name: r.FormValue("item_name"), Category: r.FormValue("category"), SerialNo: r.FormValue("serial_no"), BatchNo: r.FormValue("batch_no"), Unit: r.FormValue("unit"), Quantity: r.FormValue("quantity"), Holder: r.FormValue("holder"), Description: r.FormValue("description")}); err != nil {
 		http.Redirect(w, r, "/inventory?error="+urlQuery(err.Error()), http.StatusSeeOther)
 		return
 	}
@@ -601,11 +675,21 @@ func (s *Server) importInventory(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/inventory?error="+urlQuery(fmt.Sprintf("invalid CSV row %d", rowNumber)), http.StatusSeeOther)
 			return
 		}
-		if _, parseErr := strconv.ParseFloat(strings.TrimSpace(row[4]), 64); parseErr != nil {
+		quantityIndex := 4
+		if len(row) >= 9 {
+			quantityIndex = 6
+		}
+		if _, parseErr := strconv.ParseFloat(strings.TrimSpace(row[quantityIndex]), 64); parseErr != nil {
 			http.Redirect(w, r, "/inventory?error="+urlQuery(fmt.Sprintf("invalid quantity on CSV row %d", rowNumber)), http.StatusSeeOther)
 			return
 		}
-		items = append(items, masterdata.InventoryItem{Code: row[0], Name: row[1], Category: row[2], Unit: row[3], Quantity: row[4], Holder: row[5]})
+		item := masterdata.InventoryItem{Code: row[0], Name: row[1], Category: row[2]}
+		if len(row) >= 9 {
+			item.SerialNo, item.BatchNo, item.Unit, item.Quantity, item.Holder, item.Description = row[3], row[4], row[5], row[6], row[7], row[8]
+		} else {
+			item.Unit, item.Quantity, item.Holder = row[3], row[4], row[5]
+		}
+		items = append(items, item)
 	}
 	if err := s.Master.ImportInventory(r.Context(), items); err != nil {
 		http.Redirect(w, r, "/inventory?error="+urlQuery(err.Error()), http.StatusSeeOther)
@@ -683,6 +767,82 @@ func (s *Server) archiveConsignee(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/consignees?notice=Consignee+archived", http.StatusSeeOther)
 }
 
+func (s *Server) exportInventory(w http.ResponseWriter, r *http.Request) {
+	user, _, err := s.currentUser(r)
+	if err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if user.Role != rbac.RoleAdmin && user.Role != rbac.RoleInventory {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	items, err := s.Master.Inventory(r.Context())
+	if err != nil {
+		http.Error(w, "could not export inventory", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="inventory.csv"`)
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"item_code", "item_name", "category", "serial_no", "batch_no", "unit", "quantity", "holder", "description", "status"})
+	for _, item := range items {
+		_ = writer.Write([]string{item.Code, item.Name, item.Category, item.SerialNo, item.BatchNo, item.Unit, item.Quantity, item.Holder, item.Description, item.Status})
+	}
+	writer.Flush()
+	_ = user
+}
+
+func (s *Server) exportConsignees(w http.ResponseWriter, r *http.Request) {
+	user, _, err := s.currentUser(r)
+	if err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if user.Role != rbac.RoleAdmin && user.Role != rbac.RoleInventory {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	items, err := s.Master.Consignees(r.Context())
+	if err != nil {
+		http.Error(w, "could not export consignees", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="consignees.csv"`)
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"name", "address", "contact", "status"})
+	for _, item := range items {
+		_ = writer.Write([]string{item.Name, item.Address, item.Contact, item.Status})
+	}
+	writer.Flush()
+}
+
+func (s *Server) exportAudit(w http.ResponseWriter, r *http.Request) {
+	user, _, err := s.currentUser(r)
+	if err != nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	if user.Role != rbac.RoleAdmin && user.Role != rbac.RoleIssuing {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	events, err := s.Audit.Recent(r.Context(), 1000)
+	if err != nil {
+		http.Error(w, "could not export audit", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="audit.csv"`)
+	writer := csv.NewWriter(w)
+	_ = writer.Write([]string{"created_at", "entity_type", "action", "actor_role", "reason", "metadata"})
+	for _, event := range events {
+		_ = writer.Write([]string{event.CreatedAt.Format(time.RFC3339), event.EntityType, event.Action, event.ActorRole, event.Reason, event.Metadata})
+	}
+	writer.Flush()
+}
+
 func canEditMaster(user auth.User) bool {
 	return user.Role == rbac.RoleAdmin || user.Role == rbac.RoleInventory
 }
@@ -716,10 +876,6 @@ func draftFromForm(data view.NewPassData) (gatepass.Draft, error) {
 	if err != nil {
 		return gatepass.Draft{}, errors.New("packages must be a whole number")
 	}
-	quantity, err := strconv.ParseFloat(data.ItemQuantity, 64)
-	if err != nil {
-		return gatepass.Draft{}, errors.New("item quantity must be a number")
-	}
 	var expected time.Time
 	if strings.TrimSpace(data.ExpectedReturnDate) != "" {
 		expected, err = time.Parse("2006-01-02", data.ExpectedReturnDate)
@@ -727,7 +883,46 @@ func draftFromForm(data view.NewPassData) (gatepass.Draft, error) {
 			return gatepass.Draft{}, errors.New("expected return date must be valid")
 		}
 	}
-	return gatepass.Draft{PassType: gatepass.PassType(data.PassType), PassDate: passDate, ExpectedReturnDate: expected, Directorate: data.Directorate, Project: data.Project, ConsigneeName: data.ConsigneeName, Packages: packages, Purpose: data.Purpose, Authority: data.Authority, Items: []gatepass.Item{{Code: data.ItemCode, Name: data.ItemName, Unit: data.ItemUnit, Quantity: quantity}}}, nil
+	if len(data.Items) == 0 {
+		return gatepass.Draft{}, errors.New("at least one item row is required")
+	}
+	items := make([]gatepass.Item, 0, len(data.Items))
+	for index, formItem := range data.Items {
+		quantity, parseErr := strconv.ParseFloat(strings.TrimSpace(formItem.Quantity), 64)
+		if parseErr != nil || quantity <= 0 {
+			return gatepass.Draft{}, fmt.Errorf("item row %d quantity must be a positive number", index+1)
+		}
+		items = append(items, gatepass.Item{Code: strings.TrimSpace(formItem.Code), Name: strings.TrimSpace(formItem.Name), Category: strings.TrimSpace(formItem.Category), SerialNo: strings.TrimSpace(formItem.SerialNo), BatchNo: strings.TrimSpace(formItem.BatchNo), FullPart: strings.TrimSpace(formItem.FullPart), Unit: strings.TrimSpace(formItem.Unit), Quantity: quantity, Description: strings.TrimSpace(formItem.Description)})
+	}
+	return gatepass.Draft{PassType: gatepass.PassType(data.PassType), PassDate: passDate, ExpectedReturnDate: expected, Directorate: strings.TrimSpace(data.Directorate), Project: strings.TrimSpace(data.Project), ConsigneeName: strings.TrimSpace(data.ConsigneeName), ConsigneeAddress: strings.TrimSpace(data.ConsigneeAddress), ReferenceNo: strings.TrimSpace(data.ReferenceNo), Packages: packages, Purpose: strings.TrimSpace(data.Purpose), Authority: strings.TrimSpace(data.Authority), InventoryNo: strings.TrimSpace(data.InventoryNo), InventoryHolder: strings.TrimSpace(data.InventoryHolder), VehicleNo: strings.TrimSpace(data.VehicleNo), LoadedInPresenceOf: strings.TrimSpace(data.LoadedInPresenceOf), CarrierName: strings.TrimSpace(data.CarrierName), CarrierDesignation: strings.TrimSpace(data.CarrierDesignation), Remarks: strings.TrimSpace(data.Remarks), CopyType: data.CopyType, Items: items}, nil
+}
+
+func passDataFromRequest(r *http.Request, page view.PageData) view.NewPassData {
+	_ = r.ParseMultipartForm(8 << 20)
+	data := view.NewPassData{PageData: page, RevisionOf: r.FormValue("revision_of"), PassType: r.FormValue("pass_type"), PassDate: r.FormValue("pass_date"), ExpectedReturnDate: r.FormValue("expected_return_date"), Directorate: r.FormValue("directorate"), Project: r.FormValue("project"), ConsigneeName: r.FormValue("consignee_name"), ConsigneeAddress: r.FormValue("consignee_address"), ReferenceNo: r.FormValue("reference_no"), Packages: r.FormValue("packages"), Purpose: r.FormValue("purpose"), Authority: r.FormValue("authority"), InventoryNo: r.FormValue("inventory_no"), InventoryHolder: r.FormValue("inventory_holder"), VehicleNo: r.FormValue("vehicle_no"), LoadedInPresenceOf: r.FormValue("loaded_in_presence_of"), CarrierName: r.FormValue("carrier_name"), CarrierDesignation: r.FormValue("carrier_designation"), Remarks: r.FormValue("remarks"), CopyType: r.FormValue("copy_type")}
+	keys := []string{"item_code", "item_name", "category", "serial_no", "batch_no", "unit", "full_part", "quantity", "description"}
+	values := make(map[string][]string, len(keys))
+	for _, key := range keys {
+		values[key] = r.Form[key+"[]"]
+		if len(values[key]) == 0 {
+			values[key] = r.Form[key]
+		}
+	}
+	count := len(values["item_name"])
+	if count == 0 {
+		count = len(values["item_code"])
+	}
+	for _, key := range keys {
+		if len(values[key]) != count {
+			data.Error = "all material rows must have aligned fields"
+			return data
+		}
+	}
+	data.Items = make([]view.PassFormItem, count)
+	for index := range data.Items {
+		data.Items[index] = view.PassFormItem{Code: values["item_code"][index], Name: values["item_name"][index], Category: values["category"][index], SerialNo: values["serial_no"][index], BatchNo: values["batch_no"][index], FullPart: values["full_part"][index], Unit: values["unit"][index], Quantity: values["quantity"][index], Description: values["description"][index]}
+	}
+	return data
 }
 
 func urlQuery(value string) string {

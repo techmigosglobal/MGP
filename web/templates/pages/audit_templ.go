@@ -63,7 +63,7 @@ func AuditContent(data view.AuditData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"panel\"><div class=\"toolbar\"><div><div class=\"eyebrow accent\">TRACEABILITY</div><h2>Audit history</h2><p class=\"panel-note\">Append-only events from workflow, account, and administration changes.</p></div></div><div class=\"table-wrap\"><table class=\"data-table\"><thead><tr><th>Time</th><th>Entity</th><th>Action</th><th>Role</th><th>Reason</th><th>Metadata</th></tr></thead><tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"page-intro\"><div><div class=\"section-kicker\">TRACEABILITY</div><h2>Audit log</h2><p class=\"muted\">Append-only workflow, account, and administration events.</p></div><a class=\"btn btn-secondary\" href=\"/audit/export\">Export audit CSV</a></div><section class=\"card\"><div class=\"card-heading\"><div><h3>Immutable event history</h3><p class=\"muted\">Audit events cannot be edited or deleted by application users.</p></div></div><div class=\"table-scroll\"><table class=\"data-table\"><thead><tr><th>Time</th><th>Entity</th><th>Action</th><th>Role</th><th>Reason</th><th>Metadata</th></tr></thead><tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -75,7 +75,7 @@ func AuditContent(data view.AuditData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(event.CreatedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -88,46 +88,46 @@ func AuditContent(data view.AuditData) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(event.EntityType)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</td><td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</td><td><strong>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(event.Action)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 93}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</td><td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</strong></td><td><span class=\"badge badge-slate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(event.ActorRole)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 113}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 162}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</td><td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span></td><td>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(event.Reason)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 138}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 194}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -140,7 +140,7 @@ func AuditContent(data view.AuditData) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(event.Metadata)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 15, Col: 171}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/audit.templ`, Line: 13, Col: 227}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {

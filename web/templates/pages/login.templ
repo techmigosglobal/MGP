@@ -6,28 +6,34 @@ templ Login(data view.PageData) {
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Sign in · MGP Control Room</title>
-  <link rel="stylesheet" href="/static/css/tailwind.css"/>
-  <link rel="stylesheet" href="/static/css/app.css"/>
-  <link rel="stylesheet" href="/static/css/interaction.css"/>
-  <script src="/static/js/htmx.min.js" defer></script>
-  <script src="/static/js/alpine.min.js" defer></script>
+  <link rel="stylesheet" href="/static/css/tailwind.css"/><link rel="stylesheet" href="/static/css/app.css"/>
+  <script src="/static/js/htmx.min.js" defer></script><script src="/static/js/alpine.min.js" defer></script><script src="/static/js/app.js" defer></script>
 </head>
 <body class="login-body" x-data="{ submitting: false }">
-  <main class="login-card">
-    <section class="login-story"><div class="eyebrow">MATERIAL MOVEMENT CONTROL</div><h1>Every pass.<br/>Every stage.<br/>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class="story-footer">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section>
-    <form class="login-form" method="post" action="/login" x-on:submit="submitting = true">
-      <div><div class="eyebrow accent">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p>Use the role account provisioned by your MGP administrator.</p></div>
+  <main class="login-page">
+    <section class="login-hero"><div class="hero-orb"></div><div class="side-kicker">MATERIAL GATE PASS</div><h1>Every pass.<br/><em>Every stage.</em><br/>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class="hero-footer">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section>
+    <section class="login-panel">
+      <div class="login-mark">M</div><div class="section-kicker">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p class="muted">Use your local operator username and six-digit PIN.</p>
       if data.Error != "" {
-        <div class="notice error">{ data.Error }</div>
+        <div class="alert alert-error" role="alert">{ data.Error }</div>
       }
-      <label>Username<input type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required/></label>
-      <label>6-digit PIN<input type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required/></label>
-      <button class="button" type="submit">Sign in</button>
-    </form>
+      <form method="post" action="/login" x-on:submit="submitting = true">
+        <div class="field"><label for="username">Username</label><input id="username" class="input" type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required/></div>
+        <div class="field"><label for="pin">6-digit PIN</label><input id="pin" class="input" type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required/></div>
+        <button class="btn btn-primary btn-wide" type="submit" x-bind:disabled="submitting"><span x-show="!submitting">Sign in securely</span><span x-show="submitting" x-cloak>Checking…</span></button>
+      </form>
+      if data.TestCredentials {
+        @TestCredentials()
+      }
+      <p class="security-note">Local accounts only · Attempts are rate limited · All actions are audited</p>
+    </section>
   </main>
 </body>
 </html>
+}
+
+templ TestCredentials() {
+  <div class="default-creds"><div class="creds-title">Acceptance preview credentials</div><p>Visible only because <code>MGP_SHOW_TEST_CREDENTIALS=true</code>.</p><table><thead><tr><th>Role</th><th>Username</th><th>PIN</th></tr></thead><tbody><tr><td>ADMIN</td><td><code>admin</code></td><td><code>482617</code></td></tr><tr><td>INVENTORY</td><td><code>inventory</code></td><td><code>593204</code></td></tr><tr><td>ISSUING</td><td><code>issuing</code></td><td><code>674318</code></td></tr><tr><td>SECURITY</td><td><code>security</code></td><td><code>728451</code></td></tr><tr><td>VIEWER</td><td><code>viewer</code></td><td><code>816935</code></td></tr></tbody></table></div>
 }

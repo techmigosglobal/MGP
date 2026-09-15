@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Material Gate Pass System</title>
+  <style>
+    :root{
+      --bg:#eef6f8;
+      --surface:#ffffff;
+      --surface-2:#f7fbfc;
+      --ink:#16343b;
+      --muted:#648087;
+      --line:#d6e6ea;
+      --primary:#0d6b7b;
+      --primary-2:#0f8f8a;
+      --primary-soft:#dff4f4;
+      --green:#18764b;
+      --green-soft:#e7f7ef;
+      --blue:#2563eb;
+      --amber:#b7791f;
+      --amber-soft:#fff4db;
+      --red:#b42318;
+      --red-soft:#fde7e5;
+      --shadow:0 18px 45px rgba(13, 79, 94, .12);
+      --radius:20px;
+      --radius-sm:12px;
+      --sidebar:292px;
+      --header:72px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(135deg,#ecf7f8 0%,#f7fbff 45%,#eef9f2 100%);color:var(--ink);font-size:14px;overflow:hidden}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer;border:0}
+    a{color:inherit}
+    .hidden{display:none!important}
+    .app-bg{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
+    .blob{position:absolute;border-radius:999px;filter:blur(20px);opacity:.45}
+    .blob.one{width:320px;height:320px;background:#b7f2ef;left:-120px;top:-90px}
+    .blob.two{width:380px;height:380px;background:#d7f3e0;right:-170px;bottom:-140px}
+    .blob.three{width:230px;height:230px;background:#cde5ff;right:22%;top:-110px}
+
+    /* Login */
+    .login-page{height:100%;display:grid;place-items:center;padding:24px;overflow:auto}
+    .login-card{width:min(1050px,100%);display:grid;grid-template-columns:1.1fr .9fr;background:rgba(255,255,255,.86);backdrop-filter:blur(16px);box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.8);border-radius:32px;overflow:hidden}
+    .login-hero{padding:48px;background:linear-gradient(145deg,#075968,#0e7d79 58%,#1b8f62);color:white;position:relative;min-height:560px}
+    .login-hero:after{content:"";position:absolute;right:-80px;bottom:-80px;width:260px;height:260px;border:36px solid rgba(255,255,255,.12);border-radius:50%}
+    .brand-mark{width:64px;height:64px;border-radius:20px;background:rgba(255,255,255,.16);display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);font-weight:900;font-size:22px;letter-spacing:1px}
+    .login-hero h1{font-size:42px;line-height:1.08;margin:26px 0 14px;letter-spacing:-1px}
+    .login-hero p{font-size:16px;line-height:1.7;max-width:560px;opacity:.92}
+    .hero-pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+    .hero-pill{padding:10px 14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.12);border-radius:999px;font-size:13px}
+    .login-panel{padding:48px;display:flex;flex-direction:column;justify-content:center}
+    .section-kicker{text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:800;color:var(--primary)}
+    .login-panel h2{font-size:30px;margin:10px 0 8px;letter-spacing:-.6px}
+    .muted{color:var(--muted)}
+    .form-grid{display:grid;gap:16px}
+    .field{display:grid;gap:7px}
+    .field label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#3d6269}
+    .input,.select,.textarea{width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 13px;color:var(--ink);outline:none;transition:.18s ease;min-height:44px}
+    .textarea{resize:vertical;min-height:86px;line-height:1.45}
+    .input:focus,.select:focus,.textarea:focus{border-color:var(--primary-2);box-shadow:0 0 0 4px rgba(15,143,138,.13)}
+    .input[readonly]{background:#f2f7f8;color:#5e7479}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:14px;background:#eaf4f5;color:var(--ink);font-weight:800;transition:.18s ease;white-space:nowrap;border:1px solid transparent}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(13,79,94,.12)}
+    .btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:white}
+    .btn.green{background:linear-gradient(135deg,#147143,#1f9d67);color:white}
+    .btn.red{background:var(--red-soft);color:var(--red)}
+    .btn.amber{background:var(--amber-soft);color:#8a520f}
+    .btn.blue{background:#e8f0ff;color:#1d4ed8}
+    .btn.ghost{background:transparent;border-color:var(--line)}
+    .btn.small{padding:8px 11px;border-radius:11px;font-size:12px}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+    .alert{padding:12px 14px;border-radius:14px;background:#eef7fb;border:1px solid #d5eaf1;color:#315b66;line-height:1.45}
+    .alert.error{background:var(--red-soft);border-color:#fac8c3;color:var(--red)}
+    .alert.warn{background:var(--amber-soft);border-color:#ffe2a6;color:#85570d}
+    .alert.ok{background:var(--green-soft);border-color:#c9edd8;color:#12613c}
+    .default-creds{margin-top:20px;border-top:1px dashed var(--line);padding-top:16px;font-size:12px;line-height:1.7;color:var(--muted)}
+    .default-creds code{background:#eef6f8;border:1px solid #dbeaec;border-radius:7px;padding:2px 5px;color:#21464e}
+
+    /* App shell */
+    .app-shell{height:100%;display:grid;grid-template-columns:var(--sidebar) 1fr;overflow:hidden}
+    .sidebar{background:rgba(255,255,255,.78);backdrop-filter:blur(20px);border-right:1px solid rgba(214,230,234,.85);padding:18px;display:flex;flex-direction:column;gap:18px;overflow:auto}
+    .side-brand{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:linear-gradient(135deg,#edf8fa,#f5fcf8);border:1px solid var(--line)}
+    .side-logo{width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,var(--primary),var(--primary-2));display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 14px 25px rgba(13,107,123,.22)}
+    .side-brand strong{display:block;font-size:15px;letter-spacing:-.2px}
+    .side-brand span{font-size:12px;color:var(--muted)}
+    .nav{display:grid;gap:6px}
+    .nav-btn{width:100%;text-align:left;display:flex;align-items:center;gap:12px;border-radius:14px;padding:12px 12px;background:transparent;color:#385d64;font-weight:800;transition:.15s ease;border:1px solid transparent}
+    .nav-btn:hover{background:#eff8f9}
+    .nav-btn.active{background:linear-gradient(135deg,var(--primary-soft),#edf7ef);color:#084e58;border-color:#cfe9ea;box-shadow:0 10px 20px rgba(13,79,94,.08)}
+    .nav-icon{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:rgba(13,107,123,.1);font-size:14px;flex:0 0 26px}
+    .side-footer{margin-top:auto;display:grid;gap:10px}
+    .user-card{border:1px solid var(--line);background:rgba(247,251,252,.8);border-radius:18px;padding:12px;display:flex;gap:10px;align-items:center}
+    .avatar{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#0d6b7b,#1b8f62);color:white;display:grid;place-items:center;font-weight:900;text-transform:uppercase}
+    .user-card strong{display:block;font-size:13px}.user-card span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+    .main{height:100%;display:grid;grid-template-rows:var(--header) 1fr;overflow:hidden}
+    .topbar{height:var(--header);display:flex;align-items:center;gap:14px;justify-content:space-between;padding:14px 22px;border-bottom:1px solid rgba(214,230,234,.75);background:rgba(255,255,255,.56);backdrop-filter:blur(18px)}
+    .top-left{display:flex;align-items:center;gap:12px;min-width:0}.top-title{min-width:0}.top-title h2{margin:0;font-size:22px;letter-spacing:-.5px}.top-title p{margin:2px 0 0;color:var(--muted);font-size:12px}
+    .hamburger{display:none;width:42px;height:42px;border-radius:13px;background:#fff;border:1px solid var(--line)}
+    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .content{overflow:auto;padding:22px;scroll-behavior:smooth}
+    .view{display:none;animation:fadeIn .18s ease}.view.active{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .grid{display:grid;gap:18px}.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{background:rgba(255,255,255,.86);border:1px solid rgba(214,230,234,.88);box-shadow:0 12px 30px rgba(13,79,94,.07);border-radius:var(--radius);padding:18px}
+    .card-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.card-title h3{margin:0;font-size:17px;letter-spacing:-.2px}.card-title p{margin:5px 0 0;color:var(--muted);font-size:12px}
+    .stat-card{position:relative;overflow:hidden;padding:18px;border-radius:20px;background:rgba(255,255,255,.86);border:1px solid rgba(214,230,234,.9);box-shadow:0 12px 30px rgba(13,79,94,.07)}
+    .stat-card:before{content:"";position:absolute;right:-28px;top:-30px;width:96px;height:96px;border-radius:50%;background:rgba(15,143,138,.12)}
+    .stat-label{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:900}.stat-value{font-size:34px;font-weight:950;letter-spacing:-1px;margin-top:10px}.stat-note{font-size:12px;color:var(--muted);margin-top:4px}
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.toolbar .input,.toolbar .select{max-width:220px}.toolbar .grow{flex:1;min-width:220px;max-width:unset}
+    .table-wrap{width:100%;overflow:auto;border:1px solid var(--line);border-radius:16px;background:white}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:900px}
+    th,td{padding:11px 12px;border-bottom:1px solid #edf3f5;text-align:left;vertical-align:top;white-space:nowrap}
+    th{position:sticky;top:0;background:#f4fbfc;color:#315d66;text-transform:uppercase;letter-spacing:.07em;font-size:11px;z-index:1}
+    tr:hover td{background:#fbfefe}tr:last-child td{border-bottom:0}.cell-wrap{white-space:normal;min-width:220px;line-height:1.35}.actions{display:flex;gap:7px;flex-wrap:wrap}
+    .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;border:1px solid transparent;white-space:nowrap}
+    .badge.draft{background:#edf2f7;color:#425466;border-color:#d9e2ec}.badge.submitted{background:#e8f0ff;color:#1d4ed8;border-color:#c9dcff}.badge.approved{background:var(--green-soft);color:#12613c;border-color:#c9edd8}.badge.not-approved{background:var(--red-soft);color:#b42318;border-color:#fac8c3}.badge.passed-out{background:#eff6ff;color:#075985;border-color:#cfe8ff}.badge.returned{background:#ecfdf5;color:#047857;border-color:#bbf7d0}.badge.overdue{background:var(--red-soft);color:#b42318;border-color:#fac8c3}.badge.returnable{background:#eef9ff;color:#0369a1;border-color:#c7eaff}.badge.non-returnable{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+    .stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.step{padding:9px 12px;border-radius:999px;background:#f0f7f8;color:#587178;font-size:12px;font-weight:900;border:1px solid var(--line)}.step.done{background:var(--green-soft);color:#12613c;border-color:#c9edd8}.step.current{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .form-section{padding:16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#fff,#fbfeff);margin-bottom:16px}.form-section h4{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px}.form-section h4:before{content:"";width:8px;height:20px;border-radius:99px;background:linear-gradient(180deg,var(--primary),var(--primary-2))}
+    .inline-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.radio-line{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.radio-line label{text-transform:none;letter-spacing:0;font-size:13px;font-weight:800;color:#365b62;display:flex;gap:6px;align-items:center}
+    .item-table input,.item-table select,.item-table textarea{border:1px solid var(--line);border-radius:10px;padding:8px;min-width:110px;background:#fff}.item-table textarea{min-width:240px;min-height:44px;resize:vertical}.item-table{min-width:1150px}.item-table th,.item-table td{padding:8px}.required-star{color:var(--red)}
+    .empty{padding:30px;text-align:center;color:var(--muted);background:#fbfeff;border:1px dashed var(--line);border-radius:18px}.empty strong{display:block;color:#3f626a;margin-bottom:4px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(10,37,45,.45);backdrop-filter:blur(6px);display:none;place-items:center;padding:20px;z-index:50}.modal-backdrop.active{display:grid}.modal{width:min(920px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:24px;border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.2)}.modal-head{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:16px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center;z-index:2}.modal-head h3{margin:0}.modal-body{padding:18px}.modal-foot{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:14px 18px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .toast-wrap{position:fixed;right:20px;bottom:20px;display:grid;gap:10px;z-index:80}.toast{background:#fff;border:1px solid var(--line);box-shadow:0 14px 34px rgba(13,79,94,.16);border-radius:16px;padding:12px 14px;min-width:260px;max-width:380px;animation:toastIn .18s ease}.toast.ok{border-left:5px solid var(--green)}.toast.error{border-left:5px solid var(--red)}.toast.warn{border-left:5px solid var(--amber)}@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .logo-preview{max-height:70px;max-width:220px;object-fit:contain;background:white;border:1px solid var(--line);border-radius:12px;padding:8px}.signature-preview{max-height:52px;max-width:160px;object-fit:contain;border:1px dashed var(--line);border-radius:10px;padding:6px;background:#fff}
+    .progress-line{height:9px;background:#edf5f7;border-radius:999px;overflow:hidden}.progress-line span{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--green));border-radius:999px}
+    .print-area{display:none}
+
+    @media(max-width:1180px){:root{--sidebar:248px}.grid.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}.login-card{grid-template-columns:1fr}.login-hero{min-height:auto}.login-panel{padding:36px}.login-hero{padding:36px}}
+    @media(max-width:860px){body{overflow:auto}.app-shell{display:block;height:auto;min-height:100%}.sidebar{position:fixed;left:0;top:0;bottom:0;width:290px;z-index:40;transform:translateX(-105%);transition:.2s ease;box-shadow:var(--shadow)}.sidebar.open{transform:none}.main{height:100vh}.hamburger{display:grid;place-items:center}.grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr}.topbar{height:auto;min-height:var(--header);align-items:flex-start}.top-actions{display:none}.content{padding:14px}.login-hero h1{font-size:32px}.login-card{border-radius:22px}.toolbar .input,.toolbar .select{max-width:unset;width:100%}}
+
+    @media print{
+      body{background:white!important;overflow:visible!important}
+      body *{visibility:hidden!important}
+      #printArea,#printArea *{visibility:visible!important}
+      #printArea{display:block!important;position:absolute;left:0;top:0;width:100%;padding:0!important;background:white!important;color:#111!important}
+      @page{size:A4 portrait;margin:12mm}
+      .no-print{display:none!important}
+      .report-page{box-shadow:none!important;border:none!important;margin:0!important;width:100%!important;min-height:auto!important;padding:0!important;font-family:"Times New Roman",serif;color:#111}
+      .report-table th{background:#eaf4f4!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .report-highlight{background:#fff176!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .draft-watermark{display:block!important}
+    }
+    .report-page{width:794px;min-height:1123px;margin:0 auto;background:white;color:#111;padding:34px 38px;box-shadow:var(--shadow);border-radius:8px;position:relative;font-family:"Times New Roman",serif}
+    .report-top{display:flex;justify-content:space-between;font-size:11px}.report-header{text-align:center}.report-header img{max-height:58px;max-width:160px;object-fit:contain;margin-bottom:4px}.report-header h1{font-size:17px;line-height:1.25;margin:0;text-transform:uppercase}.report-header p{margin:2px 0;font-size:12px}.report-title{font-weight:800;text-decoration:underline;margin-top:8px;font-size:15px}.report-meta{display:grid;grid-template-columns:1fr 180px;gap:10px;margin:10px 0 8px;font-size:13px}.report-field{display:grid;grid-template-columns:180px 1fr;gap:5px;margin:4px 0}.report-field strong{text-align:left}.report-highlight{background:#fff176;padding:0 3px;font-weight:bold}.report-table{width:100%;min-width:0;border-collapse:collapse;border-spacing:0;margin:10px 0;font-size:12px}.report-table th,.report-table td{position:static;border:1px solid #333;padding:5px 6px;white-space:normal;color:#111;background:white}.report-table th{font-size:11px;text-transform:none;letter-spacing:0;text-align:center}.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:13px}.report-signs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:22px;font-size:13px;font-weight:bold}.sign-box{min-height:64px}.report-security{margin-top:18px;font-size:13px;line-height:1.9}.line{display:inline-block;border-bottom:1px solid #111;min-width:170px;height:15px}.small-line{display:inline-block;border-bottom:1px solid #111;min-width:80px;height:15px}.stamp-box{display:inline-grid;place-items:center;border:1px solid #111;width:110px;height:32px;margin:12px 0 0 280px;font-size:11px}.draft-watermark{display:none;position:absolute;left:50%;top:48%;transform:translate(-50%,-50%) rotate(-28deg);font-size:88px;color:rgba(180,35,24,.12);font-weight:900;border:8px solid rgba(180,35,24,.1);padding:12px 24px;text-transform:uppercase;pointer-events:none}.report-footer-note{position:absolute;bottom:14px;left:38px;right:38px;font-size:10px;color:#444;display:flex;justify-content:space-between;border-top:1px solid #bbb;padding-top:5px}
+  </style>
+</head>
+<body>
+  <div class="app-bg"><div class="blob one"></div><div class="blob two"></div><div class="blob three"></div></div>
+
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+      <div class="login-hero">
+        <div class="brand-mark">MGP</div>
+        <h1>Material Gate Pass Management System</h1>
+        <p>Offline-first official gate pass system for returnable and non-returnable material movement, approvals, security pass-out, returns, reports, backups and audit history.</p>
+        <div class="hero-pills">
+          <div class="hero-pill">Single HTML File</div>
+          <div class="hero-pill">Offline Local Database</div>
+          <div class="hero-pill">Role Based Access</div>
+          <div class="hero-pill">Printable A4 PDF Output</div>
+        </div>
+      </div>
+      <div class="login-panel">
+        <div class="section-kicker">Secure offline login</div>
+        <h2>Sign in</h2>
+        <p class="muted" style="margin:0 0 24px">Use your assigned role account. All data is stored locally in this browser until exported or restored.</p>
+        <form id="loginForm" class="form-grid">
+          <div id="loginAlert" class="alert error hidden"></div>
+          <div class="field">
+            <label>Username</label>
+            <input class="input" id="loginUsername" autocomplete="username" required placeholder="admin" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input class="input" id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" />
+          </div>
+          <button class="btn primary" type="submit">Login to System</button>
+        </form>
+        <div class="default-creds">
+          <strong>Default first-run accounts:</strong><br />
+          <code>admin/admin123</code> <code>inventory/inventory123</code> <code>issuing/issuing123</code> <code>security/security123</code> <code>viewer/viewer123</code><br />
+          Change passwords from User Master after first login.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="appShell" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="side-brand">
+        <div class="side-logo">MGP</div>
+        <div><strong id="sideAppTitle">Material Gate Pass</strong><span>Offline official records</span></div>
+      </div>
+      <nav class="nav" id="navMenu"></nav>
+      <div class="side-footer">
+        <div class="user-card">
+          <div class="avatar" id="userAvatar">A</div>
+          <div><strong id="userName">Admin</strong><span id="userRole">Admin</span></div>
+        </div>
+        <button class="btn ghost" id="logoutBtn">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-left">
+          <button class="hamburger" id="menuBtn">☰</button>
+          <div class="top-title"><h2 id="viewTitle">Dashboard</h2><p id="viewSubtitle">Overview of gate pass activity</p></div>
+        </div>
+        <div class="top-actions">
+          <button class="btn blue small" id="quickBackupBtn">Backup</button>
+          <button class="btn primary small" id="quickNewBtn">New Gate Pass</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div id="backupBanner" class="alert warn hidden" style="margin-bottom:14px"></div>
+        <section id="view-dashboard" class="view active"></section>
+        <section id="view-gatepass" class="view"></section>
+        <section id="view-records" class="view"></section>
+        <section id="view-inventory" class="view"></section>
+        <section id="view-consignees" class="view"></section>
+        <section id="view-users" class="view"></section>
+        <section id="view-reports" class="view"></section>
+        <section id="view-backup" class="view"></section>
+        <section id="view-audit" class="view"></section>
+        <section id="view-settings" class="view"></section>
+      </div>
+    </main>
+  </section>
+
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-head"><h3 id="modalTitle">Modal</h3><button class="btn small ghost" onclick="closeModal()">✕</button></div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot" id="modalFoot"></div>
+    </div>
+  </div>
+  <div id="toastWrap" class="toast-wrap"></div>
+  <div id="printArea" class="print-area"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const DB_NAME = 'material_gate_pass_offline_db_v1';
+  const DB_VERSION = 1;
+  let db;
+  let currentUser = null;
+  let settings = {};
+  let activeView = 'dashboard';
+  let inactivityTimer = null;
+  let editingGatePassId = null;
+
+  const ROLE = {
+    ADMIN: 'Admin',
+    INVENTORY: 'Inventory Holder',
+    ISSUING: 'Issuing Officer',
+    SECURITY: 'Security Officer',
+    VIEWER: 'Viewer'
+  };
+
+  const NAV = [
+    ['dashboard','Dashboard','Overview of gate pass activity','⌂'],
+    ['gatepass','Create Gate Pass','Create returnable or non-returnable pass','✚'],
+    ['records','Gate Pass Records','Search, approve, print and update passes','▦'],
+    ['inventory','Inventory Master','Items, categories, serial and batch records','▣'],
+    ['consignees','Consignee Master','Saved consignee names and addresses','◉'],
+    ['users','User Master','Roles, login, officers and signatures','♟'],
+    ['reports','Reports','Monthly, pending, overdue and movement reports','▤'],
+    ['backup','Backup / Import','Backup, restore, CSV and SQL export','⇄'],
+    ['audit','Audit Log','User action history','☷'],
+    ['settings','Settings','Organization, numbering and print defaults','⚙']
+  ];
+
+  const PERMISSIONS = {
+    [ROLE.ADMIN]: { create:true, editDraft:true, submit:true, approve:true, security:true, manageUsers:true, backup:true, settings:true, view:true, reports:true, print:true },
+    [ROLE.INVENTORY]: { create:true, editDraft:true, submit:true, approve:false, security:false, manageUsers:false, backup:false, settings:false, view:true, reports:true, print:true },
+    [ROLE.ISSUING]: { create:false, editDraft:false, submit:false, approve:true, security:false, manageUsers:false, backup:false, settings:false, view:true, reports:true, print:true },
+    [ROLE.SECURITY]: { create:false, editDraft:false, submit:false, approve:false, security:true, manageUsers:false, backup:false, settings:false, view:true, reports:true, print:true },
+    [ROLE.VIEWER]: { create:false, editDraft:false, submit:false, approve:false, security:false, manageUsers:false, backup:false, settings:false, view:true, reports:true, print:true }
+  };
+
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const uid = () => 'id_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const nowISO = () => new Date().toISOString();
+  const today = () => new Date().toISOString().slice(0,10);
+  const esc = (v='') => String(v ?? '').replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+  const normalize = v => String(v ?? '').trim();
+  const can = key => !!(currentUser && PERMISSIONS[currentUser.role] && PERMISSIONS[currentUser.role][key]);
+  const fmtDate = v => v ? new Date(v).toLocaleDateString('en-IN') : '';
+  const fmtDT = v => v ? new Date(v).toLocaleString('en-IN') : '';
+  const moneySafe = v => Number(v || 0).toLocaleString('en-IN');
+
+  function openDatabase(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        const stores = ['users','settings','inventory','consignees','gatepasses','audit'];
+        stores.forEach(store => { if(!d.objectStoreNames.contains(store)) d.createObjectStore(store, {keyPath:'id'}); });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function tx(store, mode='readonly'){
+    return db.transaction(store, mode).objectStore(store);
+  }
+  function getAll(store){
+    return new Promise((resolve, reject) => {
+      const req = tx(store).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function getOne(store, id){
+    return new Promise((resolve, reject) => {
+      const req = tx(store).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function putOne(store, obj){
+    return new Promise((resolve, reject) => {
+      const req = tx(store, 'readwrite').put(obj);
+      req.onsuccess = () => resolve(obj);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function delOne(store, id){
+    return new Promise((resolve, reject) => {
+      const req = tx(store, 'readwrite').delete(id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function clearStore(store){
+    return new Promise((resolve, reject) => {
+      const req = tx(store, 'readwrite').clear();
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function sha256(text){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  async function hashPassword(password, salt){ return sha256(salt + '::' + password); }
+
+  async function audit(action, entity, entityId, details=''){
+    if(!currentUser) return;
+    await putOne('audit', {id:uid(), action, entity, entityId, details, userId:currentUser.id, username:currentUser.username, role:currentUser.role, createdAt:nowISO()});
+  }
+
+  async function loadSettings(){
+    const list = await getAll('settings');
+    settings = {};
+    list.forEach(x => settings[x.id] = x.value);
+    return settings;
+  }
+  async function saveSetting(id, value){ await putOne('settings', {id, value}); settings[id] = value; }
+
+  async function seedInitialData(){
+    const users = await getAll('users');
+    if(!users.length){
+      const seedUsers = [
+        ['admin','Admin User',ROLE.ADMIN,'System Admin','admin123'],
+        ['inventory','Inventory Holder',ROLE.INVENTORY,'Inventory Holder','inventory123'],
+        ['issuing','Issuing Officer',ROLE.ISSUING,'Authorised Issuing Officer','issuing123'],
+        ['security','Security Officer',ROLE.SECURITY,'Security Assistant','security123'],
+        ['viewer','Viewer User',ROLE.VIEWER,'Viewer','viewer123']
+      ];
+      for(const [username,name,role,rank,password] of seedUsers){
+        const salt = uid();
+        await putOne('users', {id:uid(), username, name, role, rank, phone:'', signature:'', active:true, salt, passwordHash: await hashPassword(password, salt), createdAt:nowISO(), updatedAt:nowISO()});
+      }
+    }
+    const s = await getAll('settings');
+    if(!s.length){
+      const defaults = {
+        appTitle:'Material Gate Pass System',
+        orgName:'DEFENCE RESEARCH AND DEVELOPMENT LABORATORY (DRDL)',
+        orgAddress:'Kanchanbagh, Hyderabad - 500058',
+        defaultDirectorate:'ASTRA',
+        defaultProject:'SRSAM',
+        defaultCopy:'ORIGINAL',
+        yearlyReset:'yes',
+        allowManualPassNo:'yes',
+        sessionMinutes:'20',
+        logo:'',
+        lastBackupAt:''
+      };
+      for(const [id,value] of Object.entries(defaults)) await putOne('settings', {id,value});
+    }
+    const inv = await getAll('inventory');
+    if(!inv.length){
+      await putOne('inventory', {id:uid(), itemCode:'SMF-12V-65AH', itemName:'SMF 12V 65AH BATTERY', category:'Battery', serialNo:'', batchNo:'ASTRA-HANGAR-32', um:'NOS', quantity:'96', holder:'RAVI, STA-B', description:'ASTRA Building: 64, ASTRA Hangar: 32, Total: 96 Batteries', active:true, createdAt:nowISO(), updatedAt:nowISO()});
+    }
+    const cons = await getAll('consignees');
+    if(!cons.length){
+      await putOne('consignees', {id:uid(), name:'ALCOMET POWER SOLUTIONS PRIVATE LIMITED', address:'Uttam Nagar, West Delhi - 110059', contact:'', active:true, createdAt:nowISO(), updatedAt:nowISO()});
+    }
+  }
+
+  function toast(message, type='ok'){
+    const wrap = $('#toastWrap');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = esc(message);
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 3800);
+  }
+  function statusBadge(status){
+    return `<span class="badge ${String(status||'').toLowerCase().replaceAll(' ','-')}">${esc(status||'Draft')}</span>`;
+  }
+  function typeBadge(type){
+    const cls = type === 'Returnable' ? 'returnable' : 'non-returnable';
+    return `<span class="badge ${cls}">${esc(type)}</span>`;
+  }
+  function isOverdue(gp){
+    return gp.type === 'Returnable' && gp.status === 'Passed out' && gp.expectedReturnDate && new Date(gp.expectedReturnDate+'T23:59:59') < new Date();
+  }
+
+  function roleOptions(selected=''){
+    return Object.values(ROLE).map(r => `<option ${selected===r?'selected':''}>${esc(r)}</option>`).join('');
+  }
+
+  async function init(){
+    db = await openDatabase();
+    await seedInitialData();
+    await loadSettings();
+    bindGlobalEvents();
+    const savedUser = sessionStorage.getItem('mgp_user_id');
+    if(savedUser){
+      const user = await getOne('users', savedUser);
+      if(user && user.active){ currentUser = user; await startApp(); return; }
+    }
+    $('#loginPage').classList.remove('hidden');
+  }
+
+  function bindGlobalEvents(){
+    $('#loginForm').addEventListener('submit', onLogin);
+    $('#logoutBtn').addEventListener('click', logout);
+    $('#menuBtn').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+    $('#quickNewBtn').addEventListener('click', () => showView('gatepass'));
+    $('#quickBackupBtn').addEventListener('click', exportBackup);
+    ['mousemove','keydown','click','scroll'].forEach(evt => document.addEventListener(evt, resetInactivityTimer, {passive:true}));
+  }
+
+  async function onLogin(e){
+    e.preventDefault();
+    const username = normalize($('#loginUsername').value);
+    const password = $('#loginPassword').value;
+    const alert = $('#loginAlert');
+    alert.classList.add('hidden');
+    const users = await getAll('users');
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.active);
+    if(!user){ alert.textContent = 'Invalid username or inactive account.'; alert.classList.remove('hidden'); return; }
+    const hash = await hashPassword(password, user.salt);
+    if(hash !== user.passwordHash){ alert.textContent = 'Invalid password.'; alert.classList.remove('hidden'); return; }
+    currentUser = user;
+    sessionStorage.setItem('mgp_user_id', user.id);
+    await startApp();
+  }
+
+  async function startApp(){
+    await loadSettings();
+    $('#loginPage').classList.add('hidden');
+    $('#appShell').classList.remove('hidden');
+    $('#sideAppTitle').textContent = settings.appTitle || 'Material Gate Pass';
+    $('#userAvatar').textContent = (currentUser.name || currentUser.username || 'U').slice(0,1);
+    $('#userName').textContent = currentUser.name || currentUser.username;
+    $('#userRole').textContent = currentUser.role;
+    buildNav();
+    showBackupReminder();
+    resetInactivityTimer();
+    await showView(activeView || 'dashboard');
+  }
+
+  function logout(){
+    sessionStorage.removeItem('mgp_user_id');
+    currentUser = null;
+    clearTimeout(inactivityTimer);
+    $('#appShell').classList.add('hidden');
+    $('#loginPage').classList.remove('hidden');
+    $('#loginPassword').value = '';
+    $('#sidebar').classList.remove('open');
+  }
+
+  function resetInactivityTimer(){
+    if(!currentUser) return;
+    clearTimeout(inactivityTimer);
+    const mins = Math.max(5, parseInt(settings.sessionMinutes || '20',10));
+    inactivityTimer = setTimeout(() => { toast('Logged out due to inactivity.', 'warn'); logout(); }, mins * 60 * 1000);
+  }
+
+  function buildNav(){
+    const nav = $('#navMenu');
+    nav.innerHTML = NAV.map(([id,label,,icon]) => {
+      const disabled = (id === 'users' && !can('manageUsers')) || (id === 'backup' && !can('backup')) || (id === 'settings' && !can('settings')) || (id === 'gatepass' && !can('create'));
+      if(disabled) return '';
+      return `<button class="nav-btn ${activeView===id?'active':''}" data-view="${id}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`;
+    }).join('');
+    $$('.nav-btn', nav).forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
+  }
+
+  async function showView(id){
+    activeView = id;
+    buildNav();
+    $$('.view').forEach(v => v.classList.remove('active'));
+    const view = $('#view-'+id);
+    if(view) view.classList.add('active');
+    const navInfo = NAV.find(x => x[0] === id) || NAV[0];
+    $('#viewTitle').textContent = navInfo[1];
+    $('#viewSubtitle').textContent = navInfo[2];
+    $('#sidebar').classList.remove('open');
+    if(id === 'dashboard') await renderDashboard();
+    if(id === 'gatepass') await renderGatePassForm();
+    if(id === 'records') await renderRecords();
+    if(id === 'inventory') await renderInventory();
+    if(id === 'consignees') await renderConsignees();
+    if(id === 'users') await renderUsers();
+    if(id === 'reports') await renderReports();
+    if(id === 'backup') await renderBackup();
+    if(id === 'audit') await renderAudit();
+    if(id === 'settings') await renderSettings();
+    window.scrollTo(0,0);
+  }
+
+  function showBackupReminder(){
+    const banner = $('#backupBanner');
+    banner.classList.add('hidden');
+    if(!can('backup')) return;
+    const last = settings.lastBackupAt ? new Date(settings.lastBackupAt) : null;
+    const due = !last || ((Date.now() - last.getTime()) / (1000*60*60*24) >= 7);
+    if(due){
+      banner.innerHTML = `Weekly backup reminder: please export a backup file today. <button class="btn small amber" onclick="window.MGP.exportBackup()">Download backup</button>`;
+      banner.classList.remove('hidden');
+    }
+  }
+
+  async function generatePassNo(directorate, project, date){
+    const year = new Date(date || today()).getFullYear();
+    const dir = (directorate || settings.defaultDirectorate || 'DIR').replace(/[^A-Z0-9]/ig,'').toUpperCase();
+    const proj = (project || settings.defaultProject || 'PROJECT').replace(/[^A-Z0-9]/ig,'').toUpperCase();
+    const gps = await getAll('gatepasses');
+    const sameYear = gps.filter(g => String(g.passNo||'').includes('/'+year+'/'));
+    let max = 0;
+    for(const g of sameYear){
+      const last = parseInt(String(g.passNo).split('/').pop(),10);
+      if(!isNaN(last)) max = Math.max(max, last);
+    }
+    return `${dir}/${proj}/${year}/${String(max+1).padStart(4,'0')}`;
+  }
+
+  async function renderDashboard(){
+    const gps = await getAll('gatepasses');
+    const total = gps.length;
+    const pending = gps.filter(g => g.status === 'Submitted').length;
+    const returnPending = gps.filter(g => g.type === 'Returnable' && ['Approved','Passed out'].includes(g.status)).length;
+    const overdue = gps.filter(isOverdue).length;
+    const nonRet = gps.filter(g => g.type === 'Non Returnable' || g.type === 'Non-Returnable').length;
+    const todayCount = gps.filter(g => (g.createdAt || '').slice(0,10) === today() || g.date === today()).length;
+    const recent = gps.sort((a,b) => new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt)).slice(0,8);
+    $('#view-dashboard').innerHTML = `
+      <div class="grid cols-4" style="margin-bottom:18px">
+        ${statCard('Total Gate Passes', total, 'All saved records')}
+        ${statCard('Pending Approval', pending, 'Submitted and waiting')}
+        ${statCard('Returnable Pending', returnPending, 'Not yet returned')}
+        ${statCard('Overdue Returns', overdue, 'Return date crossed')}
+        ${statCard('Non-Returnable Issued', nonRet, 'Movement without return')}
+        ${statCard('Today\'s Passes', todayCount, 'Created or dated today')}
+      </div>
+      <div class="grid cols-2">
+        <div class="card">
+          <div class="card-title"><div><h3>Workflow Snapshot</h3><p>Status wise count</p></div></div>
+          ${workflowBars(gps)}
+        </div>
+        <div class="card">
+          <div class="card-title"><div><h3>Quick Actions</h3><p>Common work shortcuts</p></div></div>
+          <div class="grid cols-2">
+            <button class="btn primary" ${can('create')?'':'disabled'} onclick="window.MGP.showView('gatepass')">Create Gate Pass</button>
+            <button class="btn blue" onclick="window.MGP.showView('records')">Search Records</button>
+            <button class="btn green" onclick="window.MGP.showView('reports')">Open Reports</button>
+            <button class="btn amber" ${can('backup')?'':'disabled'} onclick="window.MGP.exportBackup()">Backup Now</button>
+          </div>
+          <div class="alert" style="margin-top:14px">Current user: <strong>${esc(currentUser.name)}</strong> · Role: <strong>${esc(currentUser.role)}</strong></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <div class="card-title"><div><h3>Recent Gate Passes</h3><p>Latest activity</p></div><button class="btn small ghost" onclick="window.MGP.showView('records')">View all</button></div>
+        ${recent.length ? recordsTable(recent, false) : emptyState('No gate passes yet', 'Create your first material gate pass to see records here.')}
+      </div>`;
+  }
+  function statCard(label, value, note){ return `<div class="stat-card"><div class="stat-label">${esc(label)}</div><div class="stat-value">${esc(value)}</div><div class="stat-note">${esc(note)}</div></div>`; }
+  function workflowBars(gps){
+    const statuses = ['Draft','Submitted','Approved','Not approved','Passed out','Returned'];
+    const max = Math.max(1, ...statuses.map(s => gps.filter(g => g.status === s).length));
+    return statuses.map(s => { const c = gps.filter(g => g.status === s).length; return `<div style="margin-bottom:12px"><div class="inline-row" style="justify-content:space-between"><strong>${statusBadge(s)}</strong><span class="muted">${c}</span></div><div class="progress-line"><span style="width:${(c/max)*100}%"></span></div></div>`; }).join('');
+  }
+
+  async function renderGatePassForm(editId=null){
+    if(!can('create')){ $('#view-gatepass').innerHTML = emptyState('No create permission', 'Your role can view records but cannot create gate passes.'); return; }
+    editingGatePassId = editId;
+    const inventory = await getAll('inventory');
+    const consignees = await getAll('consignees');
+    const users = await getAll('users');
+    let gp = editId ? await getOne('gatepasses', editId) : null;
+    if(editId && (!gp || gp.status !== 'Draft')){ toast('Only Draft records can be edited.', 'warn'); return showView('records'); }
+    const defaultPassNo = gp ? gp.passNo : await generatePassNo(settings.defaultDirectorate, settings.defaultProject, today());
+    gp = gp || {
+      id:'', type:'Returnable', status:'Draft', passNo:defaultPassNo, date:today(), directorate:settings.defaultDirectorate || 'ASTRA', project:settings.defaultProject || 'SRSAM', inventoryNo:'', inventoryHolder: currentUser.name || '', consigneeName:'', consigneeAddress:'', referenceNo:'', items:[defaultItemRow()], packages:'1', purpose:'', authority:'', vehicleNo:'', loadedInPresenceOf:'', carrierName:'', carrierDesignation:'', expectedReturnDate:'', actualReturnDate:'', securityControlNo:'', remarks:'', copyType:settings.defaultCopy || 'ORIGINAL'
+    };
+    $('#view-gatepass').innerHTML = `
+      <div class="card">
+        <div class="card-title"><div><h3>${editId ? 'Edit Draft Gate Pass' : 'New Material Gate Pass'}</h3><p>Fill all mandatory details and submit for approval.</p></div><div>${statusBadge(gp.status)}</div></div>
+        <div class="stepper">${renderSteps(gp.status)}</div>
+        <form id="gatePassForm">
+          <div class="form-section">
+            <h4>Gate Pass Information</h4>
+            <div class="grid cols-4">
+              <div class="field"><label>Gate Pass Type <span class="required-star">*</span></label><select class="select" name="type" id="gpType"><option ${gp.type==='Returnable'?'selected':''}>Returnable</option><option ${gp.type==='Non-Returnable'?'selected':''}>Non-Returnable</option></select></div>
+              <div class="field"><label>Pass Number <span class="required-star">*</span></label><input class="input" name="passNo" value="${esc(gp.passNo)}" ${can('settings') && settings.allowManualPassNo==='yes' ? '' : 'readonly'} required /></div>
+              <div class="field"><label>Date <span class="required-star">*</span></label><input class="input" type="date" name="date" value="${esc(gp.date || today())}" required /></div>
+              <div class="field"><label>Directorate / Group / Division <span class="required-star">*</span></label><input class="input" name="directorate" value="${esc(gp.directorate)}" required /></div>
+              <div class="field"><label>Project <span class="required-star">*</span></label><input class="input" name="project" value="${esc(gp.project)}" required /></div>
+              <div class="field"><label>Inventory Number</label><input class="input" name="inventoryNo" value="${esc(gp.inventoryNo)}" placeholder="402" /></div>
+              <div class="field"><label>Inventory Holder</label><input class="input" name="inventoryHolder" value="${esc(gp.inventoryHolder)}" list="usersList" /></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Consignee and Reference</h4>
+            <div class="grid cols-3">
+              <div class="field"><label>Consignee Name <span class="required-star">*</span></label><input class="input" name="consigneeName" id="consigneeName" value="${esc(gp.consigneeName)}" list="consigneeList" required /></div>
+              <div class="field"><label>Gate Pass Reference Number</label><input class="input" name="referenceNo" value="${esc(gp.referenceNo)}" placeholder="ASTRA/SRSAM/NR/59" /></div>
+              <div class="field"><label>No. of Packages <span class="required-star">*</span></label><input class="input" type="number" min="1" name="packages" value="${esc(gp.packages || '1')}" required /></div>
+              <div class="field" style="grid-column:1/-1"><label>Consignee Address</label><textarea class="textarea" name="consigneeAddress" id="consigneeAddress">${esc(gp.consigneeAddress)}</textarea></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="card-title"><div><h4 style="margin:0">Item Details</h4><p>Use inventory dropdown if available or manually enter item data.</p></div><button type="button" class="btn small primary" id="addItemBtn">Add Item</button></div>
+            <div class="table-wrap"><table class="item-table"><thead><tr><th>Item Code</th><th>Item Name *</th><th>Category</th><th>Serial No</th><th>Batch / Lot</th><th>U/M</th><th>Full / Part</th><th>Qty *</th><th>Description</th><th>Action</th></tr></thead><tbody id="itemRows"></tbody></table></div>
+          </div>
+
+          <div class="form-section">
+            <h4>Issue, Authority and Transport</h4>
+            <div class="grid cols-3">
+              <div class="field"><label>Purpose of Issue <span class="required-star">*</span></label><textarea class="textarea" name="purpose" required>${esc(gp.purpose)}</textarea></div>
+              <div class="field"><label>Authority <span class="required-star">*</span></label><textarea class="textarea" name="authority" required>${esc(gp.authority)}</textarea></div>
+              <div class="field"><label>Transport / Vehicle No.</label><input class="input" name="vehicleNo" value="${esc(gp.vehicleNo)}" /></div>
+              <div class="field"><label>Loaded in Presence of</label><input class="input" name="loadedInPresenceOf" value="${esc(gp.loadedInPresenceOf)}" list="usersList" /></div>
+              <div class="field"><label>Name of Person Carrying Stores</label><input class="input" name="carrierName" value="${esc(gp.carrierName)}" /></div>
+              <div class="field"><label>Name and Designation</label><input class="input" name="carrierDesignation" value="${esc(gp.carrierDesignation)}" /></div>
+              <div class="field return-only"><label>Probable Date of Return <span class="required-star">*</span></label><input class="input" type="date" name="expectedReturnDate" value="${esc(gp.expectedReturnDate)}" /></div>
+              <div class="field"><label>Remarks</label><textarea class="textarea" name="remarks">${esc(gp.remarks)}</textarea></div>
+            </div>
+          </div>
+
+          <datalist id="inventoryList">${inventory.map(i => `<option value="${esc(i.itemCode)}">${esc(i.itemName)}</option>`).join('')}</datalist>
+          <datalist id="consigneeList">${consignees.map(c => `<option value="${esc(c.name)}">${esc(c.address)}</option>`).join('')}</datalist>
+          <datalist id="usersList">${users.map(u => `<option value="${esc(u.name)}">${esc(u.rank || u.role)}</option>`).join('')}</datalist>
+
+          <div class="toolbar" style="justify-content:flex-end;margin:0">
+            <button class="btn ghost" type="button" onclick="window.MGP.showView('records')">Cancel</button>
+            <button class="btn blue" type="button" id="renumberBtn">Regenerate No.</button>
+            <button class="btn amber" type="button" id="saveDraftBtn">Save Draft</button>
+            <button class="btn primary" type="button" id="submitGatePassBtn">Submit for Approval</button>
+          </div>
+        </form>
+      </div>`;
+    setupItemRows(gp.items || [defaultItemRow()], inventory);
+    $('#addItemBtn').addEventListener('click', () => addItemRow(defaultItemRow(), inventory));
+    $('#gpType').addEventListener('change', toggleReturnFields);
+    $('#consigneeName').addEventListener('change', () => {
+      const c = consignees.find(x => x.name === $('#consigneeName').value);
+      if(c) $('#consigneeAddress').value = c.address || '';
+    });
+    $('#renumberBtn').addEventListener('click', async () => {
+      const f = $('#gatePassForm');
+      f.passNo.value = await generatePassNo(f.directorate.value, f.project.value, f.date.value);
+      toast('Pass number regenerated.', 'ok');
+    });
+    $('#saveDraftBtn').addEventListener('click', () => saveGatePass(false));
+    $('#submitGatePassBtn').addEventListener('click', () => saveGatePass(true));
+    toggleReturnFields();
+  }
+
+  function renderSteps(status){
+    const steps = ['Draft','Submitted','Approved','Passed out','Returned'];
+    const order = {Draft:0,Submitted:1,Approved:2,'Passed out':3,Returned:4,'Not approved':1};
+    return steps.map((s,i) => `<span class="step ${order[status] > i ? 'done' : order[status] === i ? 'current' : ''}">${esc(s)}</span>`).join('');
+  }
+  function defaultItemRow(){ return {itemCode:'', itemName:'', category:'', serialNo:'', batchNo:'', um:'NOS', fullPart:'Full Item', quantity:'1', description:''}; }
+  function setupItemRows(items, inventory){ $('#itemRows').innerHTML = ''; items.forEach(item => addItemRow(item, inventory)); }
+  function addItemRow(item, inventory){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input name="itemCode" list="inventoryList" value="${esc(item.itemCode)}" /></td>
+      <td><input name="itemName" value="${esc(item.itemName)}" required /></td>
+      <td><input name="category" value="${esc(item.category)}" /></td>
+      <td><input name="serialNo" value="${esc(item.serialNo)}" /></td>
+      <td><input name="batchNo" value="${esc(item.batchNo)}" /></td>
+      <td><input name="um" value="${esc(item.um || 'NOS')}" /></td>
+      <td><select name="fullPart"><option ${item.fullPart==='Full Item'?'selected':''}>Full Item</option><option ${item.fullPart==='Part Item'?'selected':''}>Part Item</option></select></td>
+      <td><input name="quantity" type="number" min="0" step="any" value="${esc(item.quantity || '1')}" required /></td>
+      <td><textarea name="description">${esc(item.description)}</textarea></td>
+      <td><button type="button" class="btn small red">Remove</button></td>`;
+    $('#itemRows').appendChild(tr);
+    $('button', tr).addEventListener('click', () => { if($('#itemRows').children.length > 1) tr.remove(); else toast('At least one item row is required.', 'warn'); });
+    $('[name=itemCode]', tr).addEventListener('change', e => {
+      const inv = inventory.find(x => x.itemCode === e.target.value);
+      if(inv){
+        $('[name=itemName]', tr).value = inv.itemName || '';
+        $('[name=category]', tr).value = inv.category || '';
+        $('[name=serialNo]', tr).value = inv.serialNo || '';
+        $('[name=batchNo]', tr).value = inv.batchNo || '';
+        $('[name=um]', tr).value = inv.um || 'NOS';
+        $('[name=description]', tr).value = inv.description || '';
+      }
+    });
+  }
+  function toggleReturnFields(){
+    const type = $('#gpType')?.value;
+    $$('.return-only').forEach(el => el.style.display = type === 'Returnable' ? 'grid' : 'none');
+  }
+  function collectItems(){
+    return $$('#itemRows tr').map(tr => ({
+      itemCode: normalize($('[name=itemCode]', tr).value),
+      itemName: normalize($('[name=itemName]', tr).value),
+      category: normalize($('[name=category]', tr).value),
+      serialNo: normalize($('[name=serialNo]', tr).value),
+      batchNo: normalize($('[name=batchNo]', tr).value),
+      um: normalize($('[name=um]', tr).value),
+      fullPart: $('[name=fullPart]', tr).value,
+      quantity: normalize($('[name=quantity]', tr).value),
+      description: normalize($('[name=description]', tr).value)
+    })).filter(i => i.itemName || i.itemCode || i.description);
+  }
+  async function saveGatePass(submit){
+    const f = $('#gatePassForm');
+    const data = Object.fromEntries(new FormData(f).entries());
+    data.items = collectItems();
+    const errors = [];
+    if(!data.passNo) errors.push('Pass number is required.');
+    if(!data.type) errors.push('Gate pass type is required.');
+    if(!data.date) errors.push('Date is required.');
+    if(!data.consigneeName && submit) errors.push('Consignee name is required.');
+    if(!data.items.length) errors.push('At least one item is required.');
+    if(data.items.some(i => !i.itemName || !i.quantity) && submit) errors.push('Every item row requires item name and quantity.');
+    if(data.type === 'Returnable' && !data.expectedReturnDate && submit) errors.push('Probable date of return is required for returnable gate pass.');
+    if(!data.purpose && submit) errors.push('Purpose of issue is required.');
+    if(!data.authority && submit) errors.push('Authority is required.');
+    const all = await getAll('gatepasses');
+    if(all.some(g => g.passNo === data.passNo && g.id !== editingGatePassId)) errors.push('Duplicate pass number is not allowed.');
+    if(errors.length){ toast(errors[0], 'error'); return; }
+    let gp = editingGatePassId ? await getOne('gatepasses', editingGatePassId) : null;
+    const oldStatus = gp?.status || 'Draft';
+    gp = {...(gp || {}), ...data};
+    gp.id = gp.id || uid();
+    gp.status = submit ? 'Submitted' : 'Draft';
+    gp.createdBy = gp.createdBy || currentUser.id;
+    gp.createdByName = gp.createdByName || currentUser.name;
+    gp.createdAt = gp.createdAt || nowISO();
+    gp.updatedBy = currentUser.id;
+    gp.updatedByName = currentUser.name;
+    gp.updatedAt = nowISO();
+    await putOne('gatepasses', gp);
+    await audit(editingGatePassId ? 'UPDATE_DRAFT' : 'CREATE_DRAFT', 'gatepass', gp.id, `Pass ${gp.passNo}; status ${oldStatus} -> ${gp.status}`);
+    toast(submit ? 'Gate pass submitted for approval.' : 'Draft saved successfully.', 'ok');
+    await showView('records');
+  }
+
+  async function renderRecords(){
+    const gps = await getAll('gatepasses');
+    $('#view-records').innerHTML = `
+      <div class="card">
+        <div class="card-title"><div><h3>Gate Pass Records</h3><p>Search, filter, approve, pass-out, return and print records.</p></div>${can('create')?'<button class="btn small primary" onclick="window.MGP.showView(\'gatepass\')">New Gate Pass</button>':''}</div>
+        <div class="toolbar" id="recordFilters">
+          <input class="input grow" id="recSearch" placeholder="Search pass no, consignee, item, inventory, officer, vehicle..." />
+          <input class="input" type="date" id="recFrom" />
+          <input class="input" type="date" id="recTo" />
+          <select class="select" id="recType"><option value="">All Types</option><option>Returnable</option><option>Non-Returnable</option></select>
+          <select class="select" id="recStatus"><option value="">All Status</option>${['Draft','Submitted','Approved','Not approved','Passed out','Returned'].map(s=>`<option>${s}</option>`).join('')}</select>
+          <button class="btn ghost" id="clearRecFilters">Clear</button>
+          <button class="btn blue" id="exportRecCsv">Export CSV</button>
+        </div>
+        <div id="recordsTableBox"></div>
+      </div>`;
+    const apply = () => {
+      const q = normalize($('#recSearch').value).toLowerCase();
+      const from = $('#recFrom').value;
+      const to = $('#recTo').value;
+      const type = $('#recType').value;
+      const status = $('#recStatus').value;
+      let rows = gps.filter(g => {
+        const blob = JSON.stringify(g).toLowerCase();
+        if(q && !blob.includes(q)) return false;
+        if(from && (g.date || '').slice(0,10) < from) return false;
+        if(to && (g.date || '').slice(0,10) > to) return false;
+        if(type && g.type !== type) return false;
+        if(status && g.status !== status) return false;
+        return true;
+      }).sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
+      $('#recordsTableBox').innerHTML = rows.length ? recordsTable(rows, true) : emptyState('No matching records', 'Try changing search or filter values.');
+    };
+    ['input','change'].forEach(ev => $$('#recordFilters input,#recordFilters select').forEach(el => el.addEventListener(ev, apply)));
+    $('#clearRecFilters').addEventListener('click', () => { $$('#recordFilters input').forEach(i=>i.value=''); $$('#recordFilters select').forEach(s=>s.value=''); apply(); });
+    $('#exportRecCsv').addEventListener('click', () => exportGatepassesCsv());
+    apply();
+  }
+
+  function recordsTable(rows, withActions=true){
+    return `<div class="table-wrap"><table><thead><tr><th>Pass No</th><th>Date</th><th>Type</th><th>Status</th><th>Consignee</th><th>Items</th><th>Packages</th><th>Return</th>${withActions?'<th>Actions</th>':''}</tr></thead><tbody>
+      ${rows.map(g => `<tr>
+        <td><strong>${esc(g.passNo)}</strong><br><span class="muted">${esc(g.directorate||'')}/${esc(g.project||'')}</span></td>
+        <td>${esc(fmtDate(g.date))}</td>
+        <td>${typeBadge(g.type)}</td>
+        <td>${statusBadge(g.status)} ${isOverdue(g)?'<br><span class="badge overdue">Overdue</span>':''}</td>
+        <td class="cell-wrap"><strong>${esc(g.consigneeName)}</strong><br><span class="muted">${esc(g.consigneeAddress||'')}</span></td>
+        <td class="cell-wrap">${(g.items||[]).map(i=>`${esc(i.itemName)} (${esc(i.quantity)} ${esc(i.um)})`).join('<br>')}</td>
+        <td>${esc(g.packages||'')}</td>
+        <td>${g.type==='Returnable' ? `<span class="muted">Expected:</span> ${esc(fmtDate(g.expectedReturnDate))}<br><span class="muted">Actual:</span> ${esc(fmtDate(g.actualReturnDate))}` : '<span class="muted">N/A</span>'}</td>
+        ${withActions?`<td>${recordActions(g)}</td>`:''}
+      </tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  function recordActions(g){
+    const btns = [];
+    btns.push(`<button class="btn small ghost" onclick="window.MGP.viewGatePass('${g.id}')">View</button>`);
+    if(can('editDraft') && g.status === 'Draft') btns.push(`<button class="btn small blue" onclick="window.MGP.editGatePass('${g.id}')">Edit</button>`);
+    if(can('submit') && g.status === 'Draft') btns.push(`<button class="btn small primary" onclick="window.MGP.submitExisting('${g.id}')">Submit</button>`);
+    if(can('approve') && g.status === 'Submitted'){
+      btns.push(`<button class="btn small green" onclick="window.MGP.approveGatePass('${g.id}')">Approve</button>`);
+      btns.push(`<button class="btn small red" onclick="window.MGP.rejectGatePass('${g.id}')">Not approve</button>`);
+    }
+    if(can('security') && g.status === 'Approved') btns.push(`<button class="btn small amber" onclick="window.MGP.passOutGatePass('${g.id}')">Pass out</button>`);
+    if(can('security') && g.status === 'Passed out' && g.type === 'Returnable') btns.push(`<button class="btn small green" onclick="window.MGP.returnGatePass('${g.id}')">Mark returned</button>`);
+    if(can('print')){
+      btns.push(`<button class="btn small ghost" onclick="window.MGP.printGatePass('${g.id}', true)">Draft Print</button>`);
+      if(['Approved','Passed out','Returned'].includes(g.status)) btns.push(`<button class="btn small primary" onclick="window.MGP.printGatePass('${g.id}', false)">Official PDF</button>`);
+    }
+    return `<div class="actions">${btns.join('')}</div>`;
+  }
+
+  async function submitExisting(id){
+    const gp = await getOne('gatepasses', id);
+    if(!gp || gp.status !== 'Draft') return;
+    if(!confirm('Submit this draft for approval?')) return;
+    gp.status = 'Submitted'; gp.updatedAt = nowISO(); gp.updatedBy = currentUser.id; gp.updatedByName = currentUser.name;
+    await putOne('gatepasses', gp); await audit('SUBMIT', 'gatepass', id, gp.passNo); toast('Submitted for approval.'); renderRecords();
+  }
+  async function approveGatePass(id){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    if(!confirm('Approve this gate pass?')) return;
+    gp.status = 'Approved'; gp.approvedBy = currentUser.id; gp.approvedByName = currentUser.name; gp.approvedAt = nowISO(); gp.approvalDecision = 'APPROVED'; gp.updatedAt = nowISO();
+    await putOne('gatepasses', gp); await audit('APPROVE', 'gatepass', id, gp.passNo); toast('Gate pass approved.'); renderRecords();
+  }
+  async function rejectGatePass(id){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    const reason = prompt('Reason for not approval:') || '';
+    gp.status = 'Not approved'; gp.approvedBy = currentUser.id; gp.approvedByName = currentUser.name; gp.approvedAt = nowISO(); gp.approvalDecision = 'NOT APPROVED'; gp.notApprovedReason = reason; gp.updatedAt = nowISO();
+    await putOne('gatepasses', gp); await audit('NOT_APPROVE', 'gatepass', id, `${gp.passNo}; ${reason}`); toast('Gate pass marked not approved.', 'warn'); renderRecords();
+  }
+  async function passOutGatePass(id){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    const ctrl = prompt('Security out control number:', gp.securityControlNo || '') || gp.securityControlNo || '';
+    gp.status = 'Passed out'; gp.securityControlNo = ctrl; gp.passedOutAt = nowISO(); gp.securityOfficerId = currentUser.id; gp.securityOfficerName = currentUser.name; gp.updatedAt = nowISO();
+    await putOne('gatepasses', gp); await audit('PASSED_OUT', 'gatepass', id, `${gp.passNo}; Control ${ctrl}`); toast('Gate pass marked passed out.'); renderRecords();
+  }
+  async function returnGatePass(id){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    const date = prompt('Actual returned date (YYYY-MM-DD):', today()) || today();
+    gp.status = 'Returned'; gp.actualReturnDate = date; gp.returnedAt = nowISO(); gp.returnedBy = currentUser.id; gp.returnedByName = currentUser.name; gp.updatedAt = nowISO();
+    await putOne('gatepasses', gp); await audit('RETURNED', 'gatepass', id, `${gp.passNo}; Returned ${date}`); toast('Gate pass marked fully returned.'); renderRecords();
+  }
+
+  async function viewGatePass(id){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    openModal('Gate Pass Details', `
+      <div class="grid cols-3">
+        <div class="alert"><strong>Pass No</strong><br>${esc(gp.passNo)}</div>
+        <div class="alert"><strong>Type</strong><br>${typeBadge(gp.type)}</div>
+        <div class="alert"><strong>Status</strong><br>${statusBadge(gp.status)} ${isOverdue(gp)?'<span class="badge overdue">Overdue</span>':''}</div>
+      </div>
+      <div class="form-section" style="margin-top:14px"><h4>Basic Details</h4>${detailsGrid(gp)}</div>
+      <div class="form-section"><h4>Items</h4>${itemsReadTable(gp.items || [])}</div>
+      <div class="form-section"><h4>Audit Info</h4>${detailsGrid({createdByName:gp.createdByName, createdAt:fmtDT(gp.createdAt), updatedByName:gp.updatedByName, updatedAt:fmtDT(gp.updatedAt), approvedByName:gp.approvedByName, approvedAt:fmtDT(gp.approvedAt), securityOfficerName:gp.securityOfficerName, passedOutAt:fmtDT(gp.passedOutAt), returnedByName:gp.returnedByName, returnedAt:fmtDT(gp.returnedAt)})}</div>
+    `, `<button class="btn ghost" onclick="closeModal()">Close</button><button class="btn blue" onclick="window.MGP.printGatePass('${id}', true)">Draft Print</button>${['Approved','Passed out','Returned'].includes(gp.status)?`<button class="btn primary" onclick="window.MGP.printGatePass('${id}', false)">Official PDF</button>`:''}`);
+  }
+  function detailsGrid(obj){
+    return `<div class="grid cols-3">${Object.entries(obj).filter(([,v]) => v !== undefined && v !== null && v !== '').map(([k,v]) => `<div class="field"><label>${esc(k.replace(/([A-Z])/g,' $1'))}</label><div class="input" style="height:auto;min-height:44px">${esc(v)}</div></div>`).join('')}</div>`;
+  }
+  function itemsReadTable(items){
+    return `<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Serial</th><th>Batch</th><th>U/M</th><th>Full/Part</th><th>Qty</th><th>Description</th></tr></thead><tbody>${items.map(i => `<tr><td>${esc(i.itemCode)}</td><td>${esc(i.itemName)}</td><td>${esc(i.category)}</td><td>${esc(i.serialNo)}</td><td>${esc(i.batchNo)}</td><td>${esc(i.um)}</td><td>${esc(i.fullPart)}</td><td>${esc(i.quantity)}</td><td class="cell-wrap">${esc(i.description)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  async function renderInventory(){
+    const inv = await getAll('inventory');
+    $('#view-inventory').innerHTML = `
+      <div class="card">
+        <div class="card-title"><div><h3>Inventory Master</h3><p>Saved item list for quick selection in gate pass item rows.</p></div><button class="btn small primary" onclick="window.MGP.openInventoryForm()">Add Item</button></div>
+        <div class="toolbar"><input class="input grow" id="invSearch" placeholder="Search item code, name, category, serial, batch..." /><button class="btn blue" onclick="window.MGP.exportInventoryCsv()">Export CSV</button><button class="btn ghost" onclick="window.MGP.openCsvImport('inventory')">Import CSV</button></div>
+        <div id="inventoryTable"></div>
+      </div>`;
+    const apply = () => {
+      const q = normalize($('#invSearch').value).toLowerCase();
+      const rows = inv.filter(i => JSON.stringify(i).toLowerCase().includes(q)).sort((a,b)=>String(a.itemName).localeCompare(String(b.itemName)));
+      $('#inventoryTable').innerHTML = rows.length ? `<div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Serial</th><th>Batch</th><th>U/M</th><th>Qty</th><th>Holder</th><th>Description</th><th>Actions</th></tr></thead><tbody>${rows.map(i=>`<tr><td><strong>${esc(i.itemCode)}</strong></td><td>${esc(i.itemName)}</td><td>${esc(i.category)}</td><td>${esc(i.serialNo)}</td><td>${esc(i.batchNo)}</td><td>${esc(i.um)}</td><td>${esc(i.quantity)}</td><td>${esc(i.holder)}</td><td class="cell-wrap">${esc(i.description)}</td><td><div class="actions"><button class="btn small blue" onclick="window.MGP.openInventoryForm('${i.id}')">Edit</button><button class="btn small red" onclick="window.MGP.deleteInventory('${i.id}')">Delete</button></div></td></tr>`).join('')}</tbody></table></div>` : emptyState('No inventory items', 'Add manually or import CSV.');
+    };
+    $('#invSearch').addEventListener('input', apply); apply();
+  }
+  async function openInventoryForm(id=''){
+    const item = id ? await getOne('inventory', id) : {itemCode:'',itemName:'',category:'',serialNo:'',batchNo:'',um:'NOS',quantity:'',holder:'',description:'',active:true};
+    openModal(id?'Edit Inventory Item':'Add Inventory Item', `
+      <form id="inventoryForm" class="grid cols-2">
+        ${inputField('Item Code','itemCode',item.itemCode,true)}${inputField('Item Name','itemName',item.itemName,true)}${inputField('Category','category',item.category)}${inputField('Serial Number','serialNo',item.serialNo)}${inputField('Batch / Lot Number','batchNo',item.batchNo)}${inputField('Unit of Measurement','um',item.um)}${inputField('Quantity','quantity',item.quantity,'number')}${inputField('Inventory Holder','holder',item.holder)}
+        <div class="field" style="grid-column:1/-1"><label>Description</label><textarea class="textarea" name="description">${esc(item.description)}</textarea></div>
+      </form>`, `<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="window.MGP.saveInventory('${id}')">Save Item</button>`);
+  }
+  async function saveInventory(id=''){
+    const f = $('#inventoryForm'); if(!f.reportValidity()) return;
+    const data = Object.fromEntries(new FormData(f).entries()); data.id = id || uid(); data.active = true; data.createdAt = data.createdAt || nowISO(); data.updatedAt = nowISO();
+    await putOne('inventory', data); await audit(id?'UPDATE_INVENTORY':'CREATE_INVENTORY','inventory',data.id,data.itemCode); closeModal(); toast('Inventory saved.'); renderInventory();
+  }
+  async function deleteInventory(id){ if(!confirm('Delete this inventory item?')) return; await delOne('inventory', id); await audit('DELETE_INVENTORY','inventory',id,''); toast('Inventory deleted.', 'warn'); renderInventory(); }
+
+  async function renderConsignees(){
+    const rows = await getAll('consignees');
+    $('#view-consignees').innerHTML = `<div class="card"><div class="card-title"><div><h3>Consignee Master</h3><p>Saved consignee information used in gate passes.</p></div><button class="btn small primary" onclick="window.MGP.openConsigneeForm()">Add Consignee</button></div><div class="toolbar"><input class="input grow" id="consSearch" placeholder="Search consignee..." /><button class="btn blue" onclick="window.MGP.exportConsigneesCsv()">Export CSV</button><button class="btn ghost" onclick="window.MGP.openCsvImport('consignees')">Import CSV</button></div><div id="consTable"></div></div>`;
+    const apply=()=>{ const q=normalize($('#consSearch').value).toLowerCase(); const filtered=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q)); $('#consTable').innerHTML = filtered.length ? `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Address</th><th>Contact</th><th>Actions</th></tr></thead><tbody>${filtered.map(c=>`<tr><td><strong>${esc(c.name)}</strong></td><td class="cell-wrap">${esc(c.address)}</td><td>${esc(c.contact)}</td><td><div class="actions"><button class="btn small blue" onclick="window.MGP.openConsigneeForm('${c.id}')">Edit</button><button class="btn small red" onclick="window.MGP.deleteConsignee('${c.id}')">Delete</button></div></td></tr>`).join('')}</tbody></table></div>` : emptyState('No consignees', 'Add or import consignee data.');};
+    $('#consSearch').addEventListener('input', apply); apply();
+  }
+  async function openConsigneeForm(id=''){
+    const c = id ? await getOne('consignees', id) : {name:'', address:'', contact:''};
+    openModal(id?'Edit Consignee':'Add Consignee', `<form id="consigneeForm" class="grid cols-2">${inputField('Name','name',c.name,true)}${inputField('Contact','contact',c.contact)}<div class="field" style="grid-column:1/-1"><label>Address</label><textarea class="textarea" name="address">${esc(c.address)}</textarea></div></form>`, `<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="window.MGP.saveConsignee('${id}')">Save Consignee</button>`);
+  }
+  async function saveConsignee(id=''){
+    const f=$('#consigneeForm'); if(!f.reportValidity()) return; const data=Object.fromEntries(new FormData(f).entries()); data.id=id||uid(); data.active=true; data.createdAt=data.createdAt||nowISO(); data.updatedAt=nowISO(); await putOne('consignees',data); await audit(id?'UPDATE_CONSIGNEE':'CREATE_CONSIGNEE','consignee',data.id,data.name); closeModal(); toast('Consignee saved.'); renderConsignees();
+  }
+  async function deleteConsignee(id){ if(!confirm('Delete this consignee?')) return; await delOne('consignees',id); await audit('DELETE_CONSIGNEE','consignee',id,''); toast('Consignee deleted.','warn'); renderConsignees(); }
+
+  async function renderUsers(){
+    if(!can('manageUsers')){ $('#view-users').innerHTML = emptyState('No permission', 'Only Admin can manage users.'); return; }
+    const rows = await getAll('users');
+    $('#view-users').innerHTML = `<div class="card"><div class="card-title"><div><h3>User Master</h3><p>Manage users, roles, ranks and optional signature images.</p></div><button class="btn small primary" onclick="window.MGP.openUserForm()">Add User</button></div><div class="table-wrap"><table><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Rank/Designation</th><th>Phone</th><th>Signature</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(u=>`<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.name)}</td><td>${esc(u.role)}</td><td>${esc(u.rank)}</td><td>${esc(u.phone)}</td><td>${u.signature?`<img class="signature-preview" src="${u.signature}" />`:'-'}</td><td>${u.active?'Active':'Inactive'}</td><td><div class="actions"><button class="btn small blue" onclick="window.MGP.openUserForm('${u.id}')">Edit</button><button class="btn small amber" onclick="window.MGP.resetPassword('${u.id}')">Password</button></div></td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  async function openUserForm(id=''){
+    const u = id ? await getOne('users', id) : {username:'',name:'',role:ROLE.VIEWER,rank:'',phone:'',active:true,signature:''};
+    openModal(id?'Edit User':'Add User', `<form id="userForm" class="grid cols-2">${inputField('Username','username',u.username,true)}${inputField('Full Name','name',u.name,true)}<div class="field"><label>Role</label><select class="select" name="role">${roleOptions(u.role)}</select></div>${inputField('Rank / Designation','rank',u.rank)}${inputField('Phone','phone',u.phone)}<div class="field"><label>Status</label><select class="select" name="active"><option value="true" ${u.active?'selected':''}>Active</option><option value="false" ${!u.active?'selected':''}>Inactive</option></select></div>${id?'':inputField('Initial Password','password','',true)}<div class="field"><label>Signature Image</label><input class="input" type="file" id="userSignatureFile" accept="image/*" /><input type="hidden" name="signature" value="${esc(u.signature)}" /><div id="signaturePreview">${u.signature?`<img class="signature-preview" src="${u.signature}" />`:''}</div></div></form>`, `<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="window.MGP.saveUser('${id}')">Save User</button>`);
+    $('#userSignatureFile').addEventListener('change', async e => { const b64 = await fileToDataUrl(e.target.files[0]); $('[name=signature]', $('#userForm')).value = b64 || ''; $('#signaturePreview').innerHTML = b64 ? `<img class="signature-preview" src="${b64}" />` : ''; });
+  }
+  async function saveUser(id=''){
+    const f=$('#userForm'); if(!f.reportValidity()) return; const data=Object.fromEntries(new FormData(f).entries());
+    const users = await getAll('users'); if(users.some(u=>u.username.toLowerCase()===data.username.toLowerCase() && u.id!==id)){ toast('Duplicate username not allowed.','error'); return; }
+    let user = id ? await getOne('users', id) : null;
+    if(!user){ const salt=uid(); user={id:uid(), salt, passwordHash: await hashPassword(data.password, salt), createdAt:nowISO()}; }
+    Object.assign(user, data, {active:data.active==='true', updatedAt:nowISO()}); delete user.password;
+    await putOne('users', user); await audit(id?'UPDATE_USER':'CREATE_USER','user',user.id,user.username); closeModal(); toast('User saved.'); renderUsers();
+  }
+  async function resetPassword(id){
+    const u = await getOne('users',id); if(!u) return; const pw = prompt(`New password for ${u.username}:`); if(!pw) return; u.salt=uid(); u.passwordHash=await hashPassword(pw,u.salt); u.updatedAt=nowISO(); await putOne('users',u); await audit('RESET_PASSWORD','user',id,u.username); toast('Password updated.');
+  }
+
+  async function renderReports(){
+    const gps = await getAll('gatepasses');
+    $('#view-reports').innerHTML = `<div class="card"><div class="card-title"><div><h3>Reports</h3><p>Generate exportable operational reports.</p></div></div><div class="toolbar"><select class="select" id="reportType"><option value="monthly">Monthly Gate Pass Report</option><option value="pendingReturn">Returnable Pending Report</option><option value="overdue">Overdue Return Report</option><option value="itemWise">Item-wise Movement Report</option><option value="consigneeWise">Consignee-wise Report</option><option value="officerWise">Officer-wise Report</option><option value="statusWise">Status-wise Report</option></select><input class="input" type="month" id="reportMonth" value="${today().slice(0,7)}" /><button class="btn primary" id="generateReportBtn">Generate</button><button class="btn blue" id="downloadReportBtn">Export CSV</button></div><div id="reportBox"></div></div>`;
+    let current = [];
+    const generate = () => {
+      const type = $('#reportType').value; const month=$('#reportMonth').value;
+      if(type==='monthly') current = gps.filter(g => String(g.date||'').startsWith(month)).map(flatGatePass);
+      if(type==='pendingReturn') current = gps.filter(g => g.type==='Returnable' && ['Approved','Passed out'].includes(g.status)).map(flatGatePass);
+      if(type==='overdue') current = gps.filter(isOverdue).map(flatGatePass);
+      if(type==='itemWise') current = gps.flatMap(g => (g.items||[]).map(i => ({passNo:g.passNo,date:g.date,status:g.status,type:g.type,itemCode:i.itemCode,itemName:i.itemName,category:i.category,serialNo:i.serialNo,batchNo:i.batchNo,quantity:i.quantity,um:i.um,consignee:g.consigneeName})));
+      if(type==='consigneeWise') current = groupCount(gps, 'consigneeName');
+      if(type==='officerWise') current = groupCount(gps, 'createdByName');
+      if(type==='statusWise') current = groupCount(gps, 'status');
+      $('#reportBox').innerHTML = current.length ? genericTable(current) : emptyState('No report data', 'No records matched this report.');
+    };
+    $('#generateReportBtn').addEventListener('click', generate);
+    $('#downloadReportBtn').addEventListener('click', () => downloadCsv('report_'+$('#reportType').value+'.csv', current));
+    generate();
+  }
+  function groupCount(rows, key){ const map={}; rows.forEach(r=>{ const k=r[key]||'Unknown'; map[k]=(map[k]||0)+1; }); return Object.entries(map).map(([name,count])=>({name,count})); }
+  function flatGatePass(g){ return {passNo:g.passNo,date:g.date,type:g.type,status:g.status,consignee:g.consigneeName,inventoryNo:g.inventoryNo,packages:g.packages,purpose:g.purpose,authority:g.authority,vehicleNo:g.vehicleNo,expectedReturnDate:g.expectedReturnDate,actualReturnDate:g.actualReturnDate,createdBy:g.createdByName,approvedBy:g.approvedByName}; }
+  function genericTable(rows){ const keys=Object.keys(rows[0]||{}); return `<div class="table-wrap"><table><thead><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${keys.map(k=>`<td class="cell-wrap">${esc(r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+
+  async function renderBackup(){
+    if(!can('backup')){ $('#view-backup').innerHTML = emptyState('No permission', 'Only Admin can backup, restore and export the complete database.'); return; }
+    $('#view-backup').innerHTML = `<div class="grid cols-2"><div class="card"><div class="card-title"><div><h3>Backup and Restore</h3><p>Admin-only local database backup.</p></div></div><div class="grid"><button class="btn primary" onclick="window.MGP.exportBackup()">Download Full Backup JSON</button><label class="field"><span style="font-weight:900">Restore Backup JSON</span><input class="input" type="file" id="restoreFile" accept=".json,application/json" /></label><button class="btn red" onclick="window.MGP.restoreBackup()">Restore Selected Backup</button><div class="alert warn">Restore will replace local data in this browser. Take current backup before restoring.</div></div></div><div class="card"><div class="card-title"><div><h3>Migration and CSV Tools</h3><p>Use CSV for Excel import/export and SQL dump for future MySQL migration.</p></div></div><div class="grid"><button class="btn blue" onclick="window.MGP.exportGatepassesCsv()">Export Gate Passes CSV</button><button class="btn blue" onclick="window.MGP.exportInventoryCsv()">Export Inventory CSV</button><button class="btn blue" onclick="window.MGP.exportConsigneesCsv()">Export Consignees CSV</button><button class="btn green" onclick="window.MGP.exportSqlDump()">Export SQL Dump</button><button class="btn ghost" onclick="window.MGP.openCsvImport('inventory')">Import Inventory CSV</button><button class="btn ghost" onclick="window.MGP.openCsvImport('consignees')">Import Consignee CSV</button></div></div></div>`;
+  }
+
+  async function renderAudit(){
+    const rows = (await getAll('audit')).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    $('#view-audit').innerHTML = `<div class="card"><div class="card-title"><div><h3>Audit Log</h3><p>Tracks important create, update, approval, security, backup and restore actions.</p></div><button class="btn small blue" onclick="window.MGP.exportAuditCsv()">Export CSV</button></div>${rows.length?`<div class="table-wrap"><table><thead><tr><th>Date/Time</th><th>User</th><th>Role</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${esc(fmtDT(a.createdAt))}</td><td>${esc(a.username)}</td><td>${esc(a.role)}</td><td><strong>${esc(a.action)}</strong></td><td>${esc(a.entity)}</td><td class="cell-wrap">${esc(a.details)}</td></tr>`).join('')}</tbody></table></div>`:emptyState('No audit logs yet','Actions will appear here.')}</div>`;
+  }
+
+  async function renderSettings(){
+    if(!can('settings')){ $('#view-settings').innerHTML = emptyState('No permission', 'Only Admin can change system settings.'); return; }
+    $('#view-settings').innerHTML = `<div class="card"><div class="card-title"><div><h3>System Settings</h3><p>Organization header, default numbering and session settings.</p></div></div><form id="settingsForm" class="grid cols-2">${inputField('Application Name','appTitle',settings.appTitle,true)}${inputField('Organization Name','orgName',settings.orgName,true)}<div class="field" style="grid-column:1/-1"><label>Organization Address</label><textarea class="textarea" name="orgAddress">${esc(settings.orgAddress)}</textarea></div>${inputField('Default Directorate','defaultDirectorate',settings.defaultDirectorate,true)}${inputField('Default Project','defaultProject',settings.defaultProject,true)}<div class="field"><label>Default Copy Type</label><select class="select" name="defaultCopy"><option ${settings.defaultCopy==='ORIGINAL'?'selected':''}>ORIGINAL</option><option ${settings.defaultCopy==='DUPLICATE'?'selected':''}>DUPLICATE</option><option ${settings.defaultCopy==='TRIPLICATE'?'selected':''}>TRIPLICATE</option></select></div><div class="field"><label>Manual Pass No Editing</label><select class="select" name="allowManualPassNo"><option value="yes" ${settings.allowManualPassNo==='yes'?'selected':''}>Yes</option><option value="no" ${settings.allowManualPassNo==='no'?'selected':''}>No</option></select></div>${inputField('Auto Logout Minutes','sessionMinutes',settings.sessionMinutes||'20','number')}<div class="field"><label>Organization Logo</label><input class="input" type="file" id="logoFile" accept="image/*" /><input type="hidden" name="logo" value="${esc(settings.logo||'')}" /><div id="logoPreview">${settings.logo?`<img class="logo-preview" src="${settings.logo}" />`:''}</div></div><div style="grid-column:1/-1" class="toolbar"><button class="btn primary" type="button" onclick="window.MGP.saveSettings()">Save Settings</button></div></form></div>`;
+    $('#logoFile').addEventListener('change', async e => { const b64 = await fileToDataUrl(e.target.files[0]); $('[name=logo]', $('#settingsForm')).value = b64 || ''; $('#logoPreview').innerHTML = b64 ? `<img class="logo-preview" src="${b64}" />` : ''; });
+  }
+  async function saveSettings(){
+    const data=Object.fromEntries(new FormData($('#settingsForm')).entries());
+    for(const [k,v] of Object.entries(data)) await saveSetting(k,v);
+    await audit('UPDATE_SETTINGS','settings','system','System settings updated');
+    $('#sideAppTitle').textContent = settings.appTitle || 'Material Gate Pass'; toast('Settings saved.'); showBackupReminder();
+  }
+
+  function inputField(label, name, value='', requiredOrType=false){
+    let required = requiredOrType === true; let type = requiredOrType && requiredOrType !== true ? requiredOrType : 'text';
+    return `<div class="field"><label>${esc(label)} ${required?'<span class="required-star">*</span>':''}</label><input class="input" type="${type}" name="${esc(name)}" value="${esc(value)}" ${required?'required':''} /></div>`;
+  }
+  function emptyState(title, text){ return `<div class="empty"><strong>${esc(title)}</strong><span>${esc(text)}</span></div>`; }
+
+  function openModal(title, body, foot=''){
+    $('#modalTitle').textContent = title; $('#modalBody').innerHTML = body; $('#modalFoot').innerHTML = foot || '<button class="btn primary" onclick="closeModal()">Close</button>'; $('#modalBackdrop').classList.add('active');
+  }
+  function closeModal(){ $('#modalBackdrop').classList.remove('active'); $('#modalBody').innerHTML=''; $('#modalFoot').innerHTML=''; }
+
+  async function printGatePass(id, draft=false){
+    const gp = await getOne('gatepasses', id); if(!gp) return;
+    if(!draft && !['Approved','Passed out','Returned'].includes(gp.status)){ toast('Official PDF is allowed only after approval.', 'error'); return; }
+    const users = await getAll('users');
+    const approver = users.find(u => u.id === gp.approvedBy) || {};
+    const creator = users.find(u => u.id === gp.createdBy) || {};
+    const security = users.find(u => u.id === gp.securityOfficerId) || {};
+    const watermark = draft || gp.status === 'Draft' || gp.status === 'Submitted' || gp.status === 'Not approved';
+    const report = `
+      <div class="report-page">
+        ${watermark?`<div class="draft-watermark">${gp.status==='Not approved'?'Not Approved':'Draft'}</div>`:''}
+        <div class="report-top"><span>${esc(gp.copyType || settings.defaultCopy || 'ORIGINAL')}</span><span>${esc(gp.type === 'Returnable' ? 'RETURNABLE GATEPASS' : 'NON RETURNABLE MATERIAL GATEPASS')}</span></div>
+        <div class="report-header">
+          ${settings.logo?`<img src="${settings.logo}" />`:''}
+          <h1>${esc(settings.orgName || '')}</h1>
+          <p>${esc(settings.orgAddress || '')}</p>
+          <div class="report-title">${esc(gp.type === 'Returnable' ? 'RETURNABLE GATEPASS (RGP)' : 'NON RETURNABLE MATERIAL GATEPASS (NRMGP)')}</div>
+        </div>
+        <div class="report-meta">
+          <div>
+            <div class="report-field"><strong>Consignee</strong><span>: <span class="report-highlight">${esc(gp.consigneeName)}</span></span></div>
+            <div class="report-field"><strong>Address</strong><span>: ${esc(gp.consigneeAddress)}</span></div>
+            <div class="report-field"><strong>Issuing Directorate / Group / Division</strong><span>: <span class="report-highlight">${esc(gp.directorate)}</span></span></div>
+            <div class="report-field"><strong>Pass Reference No.</strong><span>: <span class="report-highlight">${esc(gp.referenceNo)}</span></span></div>
+            <div class="report-field"><strong>Inventory No.</strong><span>: ${esc(gp.inventoryNo)}</span></div>
+          </div>
+          <div>
+            <div class="report-field" style="grid-template-columns:70px 1fr"><strong>Pass No</strong><span>: <span class="report-highlight">${esc(gp.passNo)}</span></span></div>
+            <div class="report-field" style="grid-template-columns:70px 1fr"><strong>Date</strong><span>: <span class="report-highlight">${esc(fmtDate(gp.date))}</span></span></div>
+            <div class="report-field" style="grid-template-columns:70px 1fr"><strong>Status</strong><span>: ${esc(gp.approvalDecision || gp.status)}</span></div>
+          </div>
+        </div>
+        <table class="report-table">
+          <thead><tr><th>SL.NO.</th><th>ITEMCODE</th><th>ITEM NAME AND DESCRIPTION</th><th>A/U</th><th>Qty</th></tr></thead>
+          <tbody>${(gp.items||[]).map((i,idx)=>`<tr><td style="text-align:center">${idx+1}</td><td>${esc(i.itemCode)}</td><td><span class="report-highlight">${esc(i.itemName)}</span><br>${esc(i.description)}${i.serialNo?`<br>Serial: ${esc(i.serialNo)}`:''}${i.batchNo?` · Batch/Lot: ${esc(i.batchNo)}`:''}${i.fullPart?` · ${esc(i.fullPart)}`:''}</td><td style="text-align:center">${esc(i.um)}</td><td style="text-align:center"><span class="report-highlight">${esc(i.quantity)}</span></td></tr>`).join('')}</tbody>
+        </table>
+        <div class="report-grid">
+          <div>
+            <div class="report-field"><strong>Total No. of Items</strong><span>: <span class="report-highlight">${(gp.items||[]).length}</span></span></div>
+            <div class="report-field"><strong>Purpose of Issue</strong><span>: <span class="report-highlight">${esc(gp.purpose)}</span></span></div>
+            <div class="report-field"><strong>Authority</strong><span>: <span class="report-highlight">${esc(gp.authority)}</span></span></div>
+            <div class="report-field"><strong>Transport / Vehicle No</strong><span>: <span class="report-highlight">${esc(gp.vehicleNo)}</span></span></div>
+            <div class="report-field"><strong>Loaded in Presence of</strong><span>: <span class="report-highlight">${esc(gp.loadedInPresenceOf)}</span></span></div>
+          </div>
+          <div>
+            <div class="report-field"><strong>No. of Packages</strong><span>: <span class="report-highlight">${esc(gp.packages)}</span></span></div>
+            <div class="report-field"><strong>Person Carrying Stores</strong><span>: ${esc(gp.carrierName)}</span></div>
+            <div class="report-field"><strong>Name and Designation</strong><span>: ${esc(gp.carrierDesignation)}</span></div>
+            ${gp.type==='Returnable'?`<div class="report-field"><strong>Probable Return Date</strong><span>: ${esc(fmtDate(gp.expectedReturnDate))}</span></div><div class="report-field"><strong>Actual Return Date</strong><span>: ${esc(fmtDate(gp.actualReturnDate))}</span></div>`:''}
+          </div>
+        </div>
+        <div class="report-signs">
+          <div class="sign-box">SIGNATURE, NAME AND RANK OF STOCK /<br>INVENTORY HOLDER<br><br>${creator.signature?`<img style="max-height:42px;max-width:150px" src="${creator.signature}" /><br>`:''}${esc(gp.inventoryHolder || creator.name || '')}<br><span style="font-weight:normal">${esc(creator.rank || '')}</span></div>
+          <div class="sign-box">SIGNATURE, NAME AND RANK OF<br>AUTHORISED ISSUING OFFICER<br><br>${approver.signature?`<img style="max-height:42px;max-width:150px" src="${approver.signature}" /><br>`:''}${esc(gp.approvedByName || '')}<br><span style="font-weight:normal">${esc(approver.rank || '')}</span><br>Tel .No: ${esc(approver.phone || '')}</div>
+        </div>
+        <div class="report-security">
+          Checked and passed out at <span class="small-line">${gp.passedOutAt ? esc(new Date(gp.passedOutAt).toLocaleTimeString('en-IN')) : ''}</span> hrs. on <span class="small-line">${gp.passedOutAt ? esc(fmtDate(gp.passedOutAt)) : ''}</span> (date)<br>
+          Security Out control No. <span class="line">${esc(gp.securityControlNo || '')}</span><br>
+          Signature of Security Asst. <span class="line">${security.signature?`<img style="max-height:22px;max-width:120px" src="${security.signature}" />`:''}</span>
+          <div class="stamp-box">Security Stamp</div><br>
+          ${gp.type==='Returnable'?`Stores Returned on <span class="line">${esc(fmtDate(gp.actualReturnDate))}</span> (date)<br>Signature of the Security, Asst <span class="line"></span>`:''}
+        </div>
+        <div style="position:absolute;right:44px;top:690px;text-align:center;font-weight:bold;font-size:14px">${esc(gp.approvalDecision || (draft ? 'DRAFT' : 'APPROVED'))}</div>
+        <div class="report-footer-note"><span>Generated: ${esc(fmtDT(nowISO()))}</span><span>File: ${esc(fileSafe(gp.passNo))}_${esc(gp.date)}.pdf</span></div>
+      </div>`;
+    $('#printArea').innerHTML = report;
+    closeModal();
+    setTimeout(() => window.print(), 250);
+    await audit(draft?'PRINT_DRAFT':'PRINT_OFFICIAL','gatepass',id,gp.passNo);
+  }
+
+  function fileSafe(s){ return String(s||'GATEPASS').replace(/[^a-z0-9]/ig,'_').replace(/_+/g,'_'); }
+
+  function toCsv(rows){
+    if(!rows.length) return '';
+    const keys = Object.keys(rows[0]);
+    const q = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+    return keys.join(',') + '\n' + rows.map(r => keys.map(k => q(Array.isArray(r[k]) || typeof r[k] === 'object' ? JSON.stringify(r[k]) : r[k])).join(',')).join('\n');
+  }
+  function downloadText(filename, text, type='text/plain'){
+    const blob = new Blob([text], {type}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function downloadCsv(filename, rows){ if(!rows || !rows.length){ toast('No data to export.','warn'); return; } downloadText(filename, toCsv(rows), 'text/csv;charset=utf-8'); }
+  async function exportGatepassesCsv(){ const rows=(await getAll('gatepasses')).map(flatGatePass); downloadCsv('gatepasses.csv', rows); await audit('EXPORT_CSV','gatepasses','all','Gate pass CSV exported'); }
+  async function exportInventoryCsv(){ const rows=await getAll('inventory'); downloadCsv('inventory.csv', rows); await audit('EXPORT_CSV','inventory','all','Inventory CSV exported'); }
+  async function exportConsigneesCsv(){ const rows=await getAll('consignees'); downloadCsv('consignees.csv', rows); await audit('EXPORT_CSV','consignees','all','Consignee CSV exported'); }
+  async function exportAuditCsv(){ const rows=await getAll('audit'); downloadCsv('audit_log.csv', rows); }
+  async function exportBackup(){
+    if(!can('backup')){ toast('Only Admin can export full backup.','error'); return; }
+    const data = {version:1, exportedAt:nowISO(), stores:{users:await getAll('users'), settings:await getAll('settings'), inventory:await getAll('inventory'), consignees:await getAll('consignees'), gatepasses:await getAll('gatepasses'), audit:await getAll('audit')}};
+    downloadText(`material_gate_pass_backup_${today()}.json`, JSON.stringify(data,null,2), 'application/json');
+    await saveSetting('lastBackupAt', nowISO()); await audit('BACKUP_EXPORT','database','all','Full JSON backup exported'); showBackupReminder(); toast('Backup downloaded.');
+  }
+  async function restoreBackup(){
+    const file = $('#restoreFile')?.files?.[0]; if(!file){ toast('Select a backup JSON file first.','warn'); return; }
+    if(!confirm('Restore will replace current local data. Continue?')) return;
+    const data = JSON.parse(await file.text());
+    const stores = ['users','settings','inventory','consignees','gatepasses','audit'];
+    for(const s of stores){ await clearStore(s); for(const row of (data.stores?.[s] || [])) await putOne(s,row); }
+    await loadSettings(); await audit('BACKUP_RESTORE','database','all',file.name); toast('Backup restored. Please verify records.', 'ok'); await showView('dashboard');
+  }
+  async function exportSqlDump(){
+    const stores = {users:await getAll('users'), inventory:await getAll('inventory'), consignees:await getAll('consignees'), gatepasses:await getAll('gatepasses'), audit:await getAll('audit')};
+    let sql = '-- Material Gate Pass SQL migration dump\n-- Generated '+nowISO()+'\n\n';
+    sql += `CREATE TABLE users (id VARCHAR(80) PRIMARY KEY, username VARCHAR(80), name VARCHAR(160), role VARCHAR(80), rank VARCHAR(160), phone VARCHAR(60), active BOOLEAN, signature LONGTEXT, password_hash VARCHAR(128), salt VARCHAR(128), created_at DATETIME, updated_at DATETIME);\n`;
+    sql += `CREATE TABLE inventory (id VARCHAR(80) PRIMARY KEY, item_code VARCHAR(120), item_name VARCHAR(255), category VARCHAR(120), serial_no VARCHAR(160), batch_no VARCHAR(160), um VARCHAR(40), quantity DECIMAL(18,2), holder VARCHAR(160), description TEXT, active BOOLEAN, created_at DATETIME, updated_at DATETIME);\n`;
+    sql += `CREATE TABLE consignees (id VARCHAR(80) PRIMARY KEY, name VARCHAR(255), address TEXT, contact VARCHAR(120), active BOOLEAN, created_at DATETIME, updated_at DATETIME);\n`;
+    sql += `CREATE TABLE gatepasses (id VARCHAR(80) PRIMARY KEY, pass_no VARCHAR(120) UNIQUE, type VARCHAR(40), status VARCHAR(40), date DATE, directorate VARCHAR(120), project VARCHAR(120), inventory_no VARCHAR(120), inventory_holder VARCHAR(180), consignee_name VARCHAR(255), consignee_address TEXT, reference_no VARCHAR(160), items_json JSON, packages VARCHAR(40), purpose TEXT, authority TEXT, vehicle_no VARCHAR(120), loaded_in_presence_of VARCHAR(180), carrier_name VARCHAR(180), carrier_designation VARCHAR(180), expected_return_date DATE, actual_return_date DATE, security_control_no VARCHAR(120), approval_decision VARCHAR(60), created_by_name VARCHAR(160), approved_by_name VARCHAR(160), security_officer_name VARCHAR(160), created_at DATETIME, updated_at DATETIME);\n`;
+    sql += `CREATE TABLE audit_log (id VARCHAR(80) PRIMARY KEY, created_at DATETIME, username VARCHAR(120), role VARCHAR(80), action VARCHAR(120), entity VARCHAR(80), entity_id VARCHAR(80), details TEXT);\n\n`;
+    const sq = v => v == null ? 'NULL' : `'${String(v).replace(/'/g,"''")}'`;
+    stores.users.forEach(u => sql += `INSERT INTO users VALUES (${[u.id,u.username,u.name,u.role,u.rank,u.phone,u.active?1:0,u.signature,u.passwordHash,u.salt,u.createdAt,u.updatedAt].map(sq).join(',')});\n`);
+    stores.inventory.forEach(i => sql += `INSERT INTO inventory VALUES (${[i.id,i.itemCode,i.itemName,i.category,i.serialNo,i.batchNo,i.um,i.quantity,i.holder,i.description,i.active?1:0,i.createdAt,i.updatedAt].map(sq).join(',')});\n`);
+    stores.consignees.forEach(c => sql += `INSERT INTO consignees VALUES (${[c.id,c.name,c.address,c.contact,c.active?1:0,c.createdAt,c.updatedAt].map(sq).join(',')});\n`);
+    stores.gatepasses.forEach(g => sql += `INSERT INTO gatepasses VALUES (${[g.id,g.passNo,g.type,g.status,g.date,g.directorate,g.project,g.inventoryNo,g.inventoryHolder,g.consigneeName,g.consigneeAddress,g.referenceNo,JSON.stringify(g.items||[]),g.packages,g.purpose,g.authority,g.vehicleNo,g.loadedInPresenceOf,g.carrierName,g.carrierDesignation,g.expectedReturnDate,g.actualReturnDate,g.securityControlNo,g.approvalDecision,g.createdByName,g.approvedByName,g.securityOfficerName,g.createdAt,g.updatedAt].map(sq).join(',')});\n`);
+    stores.audit.forEach(a => sql += `INSERT INTO audit_log VALUES (${[a.id,a.createdAt,a.username,a.role,a.action,a.entity,a.entityId,a.details].map(sq).join(',')});\n`);
+    downloadText('material_gate_pass_mysql_dump.sql', sql, 'application/sql');
+    await audit('EXPORT_SQL','database','all','SQL dump exported'); toast('SQL dump downloaded.');
+  }
+
+  function parseCsv(text){
+    const rows=[]; let row=[], val='', inQ=false;
+    for(let i=0;i<text.length;i++){ const c=text[i], n=text[i+1]; if(c==='"' && inQ && n==='"'){ val+='"'; i++; } else if(c==='"'){ inQ=!inQ; } else if(c===',' && !inQ){ row.push(val); val=''; } else if((c==='\n'||c==='\r') && !inQ){ if(val || row.length){ row.push(val); rows.push(row); row=[]; val=''; } if(c==='\r' && n==='\n') i++; } else val+=c; }
+    if(val || row.length){ row.push(val); rows.push(row); }
+    const headers = rows.shift()?.map(h=>h.trim()) || [];
+    return rows.map(r => Object.fromEntries(headers.map((h,i)=>[h,r[i]||''])));
+  }
+  function openCsvImport(kind){
+    const sample = kind==='inventory' ? 'itemCode,itemName,category,serialNo,batchNo,um,quantity,holder,description\nSMF-12V-65AH,SMF 12V 65AH BATTERY,Battery,,ASTRA-HANGAR-32,NOS,96,RAVI,STA-B,Sample description' : 'name,address,contact\nALCOMET POWER SOLUTIONS PRIVATE LIMITED,Uttam Nagar West Delhi,9999999999';
+    openModal(`Import ${kind} CSV`, `<div class="alert">Use Excel: Save As CSV, then import here. Required headers are shown below.</div><pre class="alert" style="white-space:pre-wrap;margin-top:12px">${esc(sample)}</pre><input class="input" type="file" id="csvImportFile" accept=".csv,text/csv" />`, `<button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="window.MGP.importCsv('${kind}')">Import CSV</button>`);
+  }
+  async function importCsv(kind){
+    const file=$('#csvImportFile')?.files?.[0]; if(!file){ toast('Select CSV file.','warn'); return; }
+    const rows=parseCsv(await file.text());
+    if(!rows.length){ toast('CSV is empty.','error'); return; }
+    if(kind==='inventory') for(const r of rows) await putOne('inventory', {id:r.id||uid(), itemCode:r.itemCode||r.item_code||'', itemName:r.itemName||r.item_name||'', category:r.category||'', serialNo:r.serialNo||r.serial_no||'', batchNo:r.batchNo||r.batch_no||'', um:r.um||'NOS', quantity:r.quantity||'', holder:r.holder||'', description:r.description||'', active:true, createdAt:nowISO(), updatedAt:nowISO()});
+    if(kind==='consignees') for(const r of rows) await putOne('consignees', {id:r.id||uid(), name:r.name||'', address:r.address||'', contact:r.contact||'', active:true, createdAt:nowISO(), updatedAt:nowISO()});
+    await audit('IMPORT_CSV',kind,'bulk',`${rows.length} rows imported from ${file.name}`); closeModal(); toast(`${rows.length} rows imported.`); if(kind==='inventory') renderInventory(); else renderConsignees();
+  }
+
+  function fileToDataUrl(file){
+    return new Promise(resolve => { if(!file) return resolve(''); const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=()=>resolve(''); r.readAsDataURL(file); });
+  }
+
+  window.MGP = { showView, exportBackup, renderGatePassForm, editGatePass:(id)=>renderGatePassForm(id), viewGatePass, submitExisting, approveGatePass, rejectGatePass, passOutGatePass, returnGatePass, printGatePass, openInventoryForm, saveInventory, deleteInventory, openConsigneeForm, saveConsignee, deleteConsignee, openUserForm, saveUser, resetPassword, saveSettings, exportGatepassesCsv, exportInventoryCsv, exportConsigneesCsv, exportAuditCsv, restoreBackup, exportSqlDump, openCsvImport, importCsv };
+  window.closeModal = closeModal;
+
+  init().catch(err => { console.error(err); document.body.innerHTML = '<pre style="padding:24px;color:#b42318">Failed to start app: '+esc(err.message || err)+'</pre>'; });
+})();
+</script>
+</body>
+</html>

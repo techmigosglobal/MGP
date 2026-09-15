@@ -5,14 +5,12 @@ import (
   layouts "github.com/techmigos/mgp/web/templates/layouts"
 )
 
-templ Audit(data view.AuditData) {
-  @layouts.Base(data.PageData, AuditContent(data))
-}
-
+templ Audit(data view.AuditData) { @layouts.Base(data.PageData, AuditContent(data)) }
 templ AuditContent(data view.AuditData) {
-  <section class="panel"><div class="toolbar"><div><div class="eyebrow accent">TRACEABILITY</div><h2>Audit history</h2><p class="panel-note">Append-only events from workflow, account, and administration changes.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Time</th><th>Entity</th><th>Action</th><th>Role</th><th>Reason</th><th>Metadata</th></tr></thead><tbody>
+  <div class="page-intro"><div><div class="section-kicker">TRACEABILITY</div><h2>Audit log</h2><p class="muted">Append-only workflow, account, and administration events.</p></div><a class="btn btn-secondary" href="/audit/export">Export audit CSV</a></div>
+  <section class="card"><div class="card-heading"><div><h3>Immutable event history</h3><p class="muted">Audit events cannot be edited or deleted by application users.</p></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Time</th><th>Entity</th><th>Action</th><th>Role</th><th>Reason</th><th>Metadata</th></tr></thead><tbody>
     for _, event := range data.Events {
-      <tr><td>{ event.CreatedAt }</td><td>{ event.EntityType }</td><td>{ event.Action }</td><td>{ event.ActorRole }</td><td>{ event.Reason }</td><td><code>{ event.Metadata }</code></td></tr>
+      <tr><td>{ event.CreatedAt }</td><td>{ event.EntityType }</td><td><strong>{ event.Action }</strong></td><td><span class="badge badge-slate">{ event.ActorRole }</span></td><td>{ event.Reason }</td><td><code>{ event.Metadata }</code></td></tr>
     }
   </tbody></table></div></section>
 }

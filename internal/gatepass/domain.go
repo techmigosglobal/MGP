@@ -36,10 +36,15 @@ const (
 )
 
 type Item struct {
-	Code     string
-	Name     string
-	Quantity float64
-	Unit     string
+	Code        string
+	Name        string
+	Category    string
+	SerialNo    string
+	BatchNo     string
+	FullPart    string
+	Quantity    float64
+	Unit        string
+	Description string
 }
 
 type Draft struct {
@@ -49,9 +54,19 @@ type Draft struct {
 	Directorate        string
 	Project            string
 	ConsigneeName      string
+	ConsigneeAddress   string
+	ReferenceNo        string
 	Packages           int
 	Purpose            string
 	Authority          string
+	InventoryNo        string
+	InventoryHolder    string
+	VehicleNo          string
+	LoadedInPresenceOf string
+	CarrierName        string
+	CarrierDesignation string
+	Remarks            string
+	CopyType           string
 	Items              []Item
 }
 

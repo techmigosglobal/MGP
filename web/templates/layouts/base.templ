@@ -1,4 +1,4 @@
-package templates
+package layouts
 
 import "github.com/techmigos/mgp/internal/view"
 
@@ -15,48 +15,68 @@ templ Base(data view.PageData, content templ.Component) {
   <link rel="stylesheet" href="/static/css/interaction.css"/>
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/alpine.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
 </head>
-<body class="app-body" hx-boost="true" hx-indicator="#loading-indicator" x-data="{ noticeOpen: true }">
+<body class="app-body" hx-boost="true" hx-indicator="#loading-indicator" x-data="{ sidebarOpen: false, noticeOpen: true }">
+  <div class="app-bg"><span></span><span></span><span></span></div>
   <div id="loading-indicator" class="htmx-indicator" role="status" aria-live="polite">Loading…</div>
   <div class="app-shell">
-    <aside class="sidebar">
+    <div class="sidebar-backdrop" x-show="sidebarOpen" x-on:click="sidebarOpen = false" x-cloak></div>
+    <aside class="sidebar" x-bind:class="{ 'is-open': sidebarOpen }">
       <div>
-        <div class="eyebrow">MATERIAL GATE PASS</div>
-        <div class="brand-title">MGP Control Room</div>
-        <div class="brand-rule"></div>
+        <div class="side-brand"><div class="side-logo">M</div><div><div class="side-kicker">MATERIAL GATE PASS</div><div class="side-title">MGP Control Room</div></div></div>
+        <div class="side-rule"></div>
         <nav class="nav" aria-label="Primary navigation">
-          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "dashboard")) } href="/dashboard">Overview</a>
-          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "passes")) } href="/gate-passes">Gate passes</a>
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "dashboard")) } href="/dashboard"><span>⌂</span>Dashboard</a>
           if data.Role == "ADMIN" || data.Role == "INVENTORY" {
-            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "create")) } href="/gate-passes/new">Create pass</a>
+            <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "create")) } href="/gate-passes/new"><span>＋</span>Create Gate Pass</a>
           }
-          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "inventory")) } href="/inventory">Inventory master</a>
-          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "consignees")) } href="/consignees">Consignee master</a>
-          <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "reports")) } href="/reports">Reports</a>
-          if data.Role == "ADMIN" || data.Role == "ISSUING" {
-            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "audit")) } href="/audit">Audit log</a>
-          }
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "passes")) } href="/gate-passes"><span>▤</span>Gate Pass Records</a>
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "inventory")) } href="/inventory"><span>▦</span>Inventory Master</a>
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "consignees")) } href="/consignees"><span>♙</span>Consignee Master</a>
           if data.Role == "ADMIN" {
-            <a class={ templ.Classes("nav-link", templ.KV("active", data.Active == "users")) } href="/users">User master</a>
+            <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "users")) } href="/users"><span>♟</span>User Master</a>
+          }
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "reports")) } href="/reports"><span>▥</span>Reports</a>
+          if data.Role == "ADMIN" {
+            <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "backup")) } href="/settings#backup"><span>⇩</span>Backup / Import</a>
+          }
+          <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "audit")) } href="/audit"><span>◴</span>Audit Log</a>
+          if data.Role == "ADMIN" {
+            <a class={ templ.Classes("nav-btn", templ.KV("active", data.Active == "settings")) } href="/settings"><span>⚙</span>Settings</a>
           }
         </nav>
       </div>
-      <div class="sidebar-footer">BACKEND AUTHORITATIVE<br/><span>Every transition is validated and recorded by the server.</span></div>
+      <div class="sidebar-footer"><span class="online-dot"></span><div><strong>System online</strong><small>PostgreSQL · Server authoritative</small></div></div>
     </aside>
-    <main class="main-content">
+    <main class="main">
       <header class="topbar">
-        <div><div class="eyebrow accent">{ data.Role } WORKSPACE</div><h1>{ data.Title }</h1></div>
-        <div class="operator-card"><span>{ data.UserName }</span><span class="role-chip">{ data.Role }</span><form method="post" action="/logout"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="button secondary small" type="submit">Sign out</button></form></div>
+        <button class="mobile-menu" type="button" aria-label="Open navigation" x-on:click="sidebarOpen = true">☰</button>
+        <div class="topbar-heading"><div class="section-kicker">{ data.Role } WORKSPACE</div><h1>{ data.Title }</h1></div>
+        <div class="topbar-actions">
+          if data.Role == "ADMIN" {
+            <a class="btn btn-secondary btn-sm" href="/settings#backup">Backup</a>
+          }
+          if data.Role == "ADMIN" || data.Role == "INVENTORY" {
+            <a class="btn btn-primary btn-sm" href="/gate-passes/new">＋ New gate pass</a>
+          }
+          <div class="operator-card"><div class="operator-avatar">{ operatorInitial(data.UserName) }</div><div><strong>{ data.UserName }</strong><span>{ data.Role }</span></div></div>
+          <form method="post" action="/logout"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out">↪</button></form>
+        </div>
       </header>
-      if data.Notice != "" {
-        <div class="notice success" x-show="noticeOpen"><span>{ data.Notice }</span><button class="notice-dismiss" type="button" aria-label="Dismiss notice" x-on:click="noticeOpen = false">×</button></div>
-      }
-      if data.Error != "" {
-        <div class="notice error" x-show="noticeOpen"><span>{ data.Error }</span><button class="notice-dismiss" type="button" aria-label="Dismiss error" x-on:click="noticeOpen = false">×</button></div>
-      }
-      @content
+      <div class="content">
+        if data.Notice != "" {
+          <div class="toast toast-success" x-show="noticeOpen" role="status"><span>✓</span><div>{ data.Notice }</div><button type="button" x-on:click="noticeOpen = false" aria-label="Dismiss">×</button></div>
+        }
+        if data.Error != "" {
+          <div class="toast toast-error" x-show="noticeOpen" role="alert"><span>!</span><div>{ data.Error }</div><button type="button" x-on:click="noticeOpen = false" aria-label="Dismiss">×</button></div>
+        }
+        @content
+      </div>
     </main>
   </div>
 </body>
 </html>
 }
+
+func operatorInitial(value string) string { if value == "" { return "U" }; return string([]rune(value)[0]) }

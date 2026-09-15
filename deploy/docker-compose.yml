@@ -26,6 +26,7 @@ services:
       MGP_DATABASE_URL: postgres://${POSTGRES_USER:-mgp_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mgp}?sslmode=disable
       MGP_DOCUMENT_DIR: /var/lib/mgp/documents
       MGP_SECURE_COOKIE: ${MGP_SECURE_COOKIE:-false}
+      MGP_SHOW_TEST_CREDENTIALS: ${MGP_SHOW_TEST_CREDENTIALS:-false}
     volumes:
       - documents_data:/var/lib/mgp/documents
     ports:

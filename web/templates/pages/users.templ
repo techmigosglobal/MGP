@@ -5,25 +5,13 @@ import (
   layouts "github.com/techmigos/mgp/web/templates/layouts"
 )
 
-templ Users(data view.UsersData) {
-  @layouts.Base(data.PageData, UsersContent(data))
-}
-
+templ Users(data view.UsersData) { @layouts.Base(data.PageData, UsersContent(data)) }
 templ UsersContent(data view.UsersData) {
-  <section class="panel">
-    <div class="toolbar"><div><div class="eyebrow accent">ACCESS CONTROL</div><h2>User master</h2><p class="panel-note">Application accounts are local, role-bound, and auditable.</p></div></div>
-    <form class="form-grid compact-form" method="post" action="/users">
-      <input type="hidden" name="csrf_token" value={ data.CSRFToken }/>
-      <label>Name<input name="name" required/></label>
-      <label>Username<input name="username" pattern="[a-z][a-z0-9._-]{2,31}" maxlength="32" autocapitalize="none" required/></label>
-      <label>Role<select name="role" required><option>INVENTORY</option><option>ISSUING</option><option>SECURITY</option><option>VIEWER</option><option>ADMIN</option></select></label>
-      <label>Initial 6-digit PIN<input type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required/></label>
-      <div class="form-actions"><button class="button" type="submit">Create account</button></div>
-    </form>
-  </section>
-  <section class="panel"><div class="section-heading"><div><h2>Accounts</h2><p class="panel-note">Suspended accounts are denied at login and on every authenticated request. PINs are never displayed.</p></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+  <div class="page-intro"><div><div class="section-kicker">ACCESS CONTROL</div><h2>User master</h2><p class="muted">Local username/PIN accounts are role-bound, rate-limited, and audited.</p></div></div>
+  <section class="card"><div class="card-heading"><div><div class="section-kicker">NEW ACCOUNT</div><h3>Create operator</h3></div></div><form class="form-grid cols-4" method="post" action="/users" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><div class="field"><label>Full name</label><input class="input" name="name" required/></div><div class="field"><label>Username</label><input class="input" name="username" pattern="[a-z][a-z0-9._-]{2,31}" required/></div><div class="field"><label>Role</label><select class="select" name="role" required><option>INVENTORY</option><option>ISSUING</option><option>SECURITY</option><option>VIEWER</option><option>ADMIN</option></select></div><div class="field"><label>Initial six-digit PIN</label><input class="input" type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required/></div><div class="field"><label>Rank / designation</label><input class="input" name="rank"/></div><div class="field"><label>Phone</label><input class="input" name="phone"/></div><div class="field"><label>Signature image</label><input class="input" type="file" name="signature" accept="image/png,image/jpeg"/></div><div class="field"><label>&nbsp;</label><button class="btn btn-primary" type="submit">Create account</button></div></form></section>
+  <section class="card"><div class="card-heading"><div><div class="section-kicker">ACCOUNT DIRECTORY</div><h3>Accounts</h3></div></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Name</th><th>Username</th><th>Rank / phone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
     for _, user := range data.Users {
-      <tr><td>{ user.Name }</td><td>{ user.Username }</td><td><span class="role-chip">{ user.Role }</span></td><td><span class="status-badge">{ user.Status }</span></td><td><div class="inline-actions"><form method="post" action={ templ.URL("/users/" + user.ID + "/status") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input type="hidden" name="status" value={ userStatusToggle(user.Status) }/><button class="button ghost small" type="submit">{ userStatusLabel(user.Status) }</button></form><form method="post" action={ templ.URL("/users/" + user.ID + "/reset-pin") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input class="small-input" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="New 6-digit PIN" required/><button class="button ghost small" type="submit">Reset PIN</button></form></div></td></tr>
+      <tr><td><strong>{ user.Name }</strong></td><td><code>{ user.Username }</code></td><td>{ user.Rank }<br/>{ user.Phone }</td><td><span class="badge badge-slate">{ user.Role }</span></td><td><span class="badge badge-slate">{ user.Status }</span></td><td><div class="inline-actions"><form method="post" action={ templ.URL("/users/" + user.ID + "/status") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input type="hidden" name="status" value={ userStatusToggle(user.Status) }/><button class="btn btn-ghost btn-sm" type="submit">{ userStatusLabel(user.Status) }</button></form><form method="post" action={ templ.URL("/users/" + user.ID + "/reset-pin") }><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><input class="input" style="width:135px;height:32px" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="New PIN" required/><button class="btn btn-ghost btn-sm" type="submit">Reset PIN</button></form></div></td></tr>
     }
   </tbody></table></div></section>
 }

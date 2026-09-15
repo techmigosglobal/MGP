@@ -63,72 +63,111 @@ func SettingsContent(data view.SettingsData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"panel narrow-panel\"><div class=\"section-heading\"><div><div class=\"eyebrow accent\">ADMINISTRATION</div><h2>Organization settings</h2><p class=\"panel-note\">These defaults help operators create consistent records.</p></div></div><form class=\"form-grid\" method=\"post\" action=\"/settings\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"page-intro\"><div><div class=\"section-kicker\">ADMINISTRATION</div><h2>Settings</h2><p class=\"muted\">Configure organization defaults used by operators and documents.</p></div></div><section class=\"card\"><div class=\"card-heading\"><div><div class=\"section-kicker\">ORGANIZATION</div><h3>Application and document defaults</h3></div></div><form class=\"form-grid cols-2\" method=\"post\" action=\"/settings\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.CSRFToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 14, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 280}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><label class=\"field-span-2\">Organization name<input name=\"name\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"field\"><label>Application name</label><input class=\"input\" name=\"app_title\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.OrganizationName)
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.ApplicationName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 14, Col: 219}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 400}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" required></label><label class=\"field-span-2\">Address<textarea name=\"address\" rows=\"3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" required></div><div class=\"field\"><label>Organization name</label><input class=\"input\" name=\"name\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.OrganizationAddress)
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.OrganizationName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 14, Col: 335}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 532}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</textarea></label><label>Default directorate<input name=\"default_directorate\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" required></div><div class=\"field span-2\"><label>Organization address</label><textarea class=\"textarea\" name=\"address\" rows=\"3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.DefaultDirectorate)
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(data.OrganizationAddress)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 14, Col: 447}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 689}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"></label><label>Default project<input name=\"default_project\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</textarea></div><div class=\"field\"><label>Default directorate</label><input class=\"input\" name=\"default_directorate\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.DefaultProject)
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.DefaultDirectorate)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 14, Col: 538}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 840}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"></label><div class=\"field-span-2 form-actions\"><button class=\"button\" type=\"submit\">Save settings</button></div></form></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"></div><div class=\"field\"><label>Default project</label><input class=\"input\" name=\"default_project\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.DefaultProject)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 970}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"></div><div class=\"field\"><label>Default copy type</label><select class=\"select\" name=\"default_copy\"><option value=\"ORIGINAL\">Original</option><option value=\"DUPLICATE\">Duplicate</option><option value=\"TRIPLICATE\">Triplicate</option></select></div><div class=\"field\"><label>Session timeout (minutes)</label><input class=\"input\" name=\"session_minutes\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.SessionMinutes)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 1351}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" inputmode=\"numeric\"></div><div class=\"field\"><label>Manual pass-number policy</label><select class=\"select\" name=\"allow_manual_pass_no\"><option value=\"no\">Database allocated only</option><option value=\"yes\">Allow administrator override</option></select></div><div class=\"field\"><label>Organization logo path</label><input class=\"input\" name=\"logo\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(data.Logo)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/settings.templ`, Line: 11, Col: 1720}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" placeholder=\"data/documents/logo.png\"></div><div class=\"form-footer span-2\"><button class=\"btn btn-primary\" type=\"submit\">Save settings</button></div></form></section><section class=\"card\" id=\"backup\"><div class=\"card-heading\"><div><div class=\"section-kicker\">OPERATIONS</div><h3>Backup and restore</h3><p class=\"muted\">Use the offline deployment bundle backup scripts for PostgreSQL dumps, document archives, checksums, and restore verification.</p></div></div><div class=\"quick-actions\"><div class=\"quick-action\"><span>⇩</span><div><strong>Backup tooling</strong><small>Available in deploy/backup and the server-PC package</small></div></div><div class=\"quick-action\"><span>✓</span><div><strong>Recovery target</strong><small>Daily backup · maximum recovery point 24 hours · monthly restore test</small></div></div></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

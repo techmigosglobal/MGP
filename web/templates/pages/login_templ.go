@@ -31,19 +31,19 @@ func Login(data view.PageData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Sign in · MGP Control Room</title><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><link rel=\"stylesheet\" href=\"/static/css/interaction.css\"><script src=\"/static/js/htmx.min.js\" defer></script><script src=\"/static/js/alpine.min.js\" defer></script></head><body class=\"login-body\" x-data=\"{ submitting: false }\"><main class=\"login-card\"><section class=\"login-story\"><div class=\"eyebrow\">MATERIAL MOVEMENT CONTROL</div><h1>Every pass.<br>Every stage.<br>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class=\"story-footer\">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section><form class=\"login-form\" method=\"post\" action=\"/login\" x-on:submit=\"submitting = true\"><div><div class=\"eyebrow accent\">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p>Use the role account provisioned by your MGP administrator.</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Sign in · MGP Control Room</title><link rel=\"stylesheet\" href=\"/static/css/tailwind.css\"><link rel=\"stylesheet\" href=\"/static/css/app.css\"><script src=\"/static/js/htmx.min.js\" defer></script><script src=\"/static/js/alpine.min.js\" defer></script><script src=\"/static/js/app.js\" defer></script></head><body class=\"login-body\" x-data=\"{ submitting: false }\"><main class=\"login-page\"><section class=\"login-hero\"><div class=\"hero-orb\"></div><div class=\"side-kicker\">MATERIAL GATE PASS</div><h1>Every pass.<br><em>Every stage.</em><br>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class=\"hero-footer\">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section><section class=\"login-panel\"><div class=\"login-mark\">M</div><div class=\"section-kicker\">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p class=\"muted\">Use your local operator username and six-digit PIN.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if data.Error != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"notice error\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"alert alert-error\" role=\"alert\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.Error)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/login.templ`, Line: 24, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/login.templ`, Line: 20, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -54,7 +54,46 @@ func Login(data view.PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<label>Username<input type=\"text\" name=\"username\" autocomplete=\"username\" autocapitalize=\"none\" spellcheck=\"false\" required></label> <label>6-digit PIN<input type=\"password\" name=\"pin\" inputmode=\"numeric\" pattern=\"[0-9]{6}\" maxlength=\"6\" autocomplete=\"one-time-code\" required></label> <button class=\"button\" type=\"submit\">Sign in</button></form></main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<form method=\"post\" action=\"/login\" x-on:submit=\"submitting = true\"><div class=\"field\"><label for=\"username\">Username</label><input id=\"username\" class=\"input\" type=\"text\" name=\"username\" autocomplete=\"username\" autocapitalize=\"none\" spellcheck=\"false\" required></div><div class=\"field\"><label for=\"pin\">6-digit PIN</label><input id=\"pin\" class=\"input\" type=\"password\" name=\"pin\" inputmode=\"numeric\" pattern=\"[0-9]{6}\" maxlength=\"6\" autocomplete=\"one-time-code\" required></div><button class=\"btn btn-primary btn-wide\" type=\"submit\" x-bind:disabled=\"submitting\"><span x-show=\"!submitting\">Sign in securely</span><span x-show=\"submitting\" x-cloak>Checking…</span></button></form>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if data.TestCredentials {
+			templ_7745c5c3_Err = TestCredentials().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"security-note\">Local accounts only · Attempts are rate limited · All actions are audited</p></section></main></body></html>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func TestCredentials() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var3 == nil {
+			templ_7745c5c3_Var3 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"default-creds\"><div class=\"creds-title\">Acceptance preview credentials</div><p>Visible only because <code>MGP_SHOW_TEST_CREDENTIALS=true</code>.</p><table><thead><tr><th>Role</th><th>Username</th><th>PIN</th></tr></thead><tbody><tr><td>ADMIN</td><td><code>admin</code></td><td><code>482617</code></td></tr><tr><td>INVENTORY</td><td><code>inventory</code></td><td><code>593204</code></td></tr><tr><td>ISSUING</td><td><code>issuing</code></td><td><code>674318</code></td></tr><tr><td>SECURITY</td><td><code>security</code></td><td><code>728451</code></td></tr><tr><td>VIEWER</td><td><code>viewer</code></td><td><code>816935</code></td></tr></tbody></table></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

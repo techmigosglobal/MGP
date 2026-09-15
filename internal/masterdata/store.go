@@ -30,7 +30,7 @@ func (s Store) ImportInventory(ctx context.Context, items []InventoryItem) error
 	}
 	defer tx.Rollback()
 	for _, item := range items {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO inventory_items(item_code,item_name,category,unit_of_measure,quantity,holder) VALUES($1,$2,$3,$4,$5,$6)`, strings.TrimSpace(item.Code), strings.TrimSpace(item.Name), item.Category, item.Unit, item.Quantity, item.Holder); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO inventory_items(item_code,item_name,category,serial_no,batch_no,unit_of_measure,quantity,holder,description) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, strings.TrimSpace(item.Code), strings.TrimSpace(item.Name), item.Category, item.SerialNo, item.BatchNo, item.Unit, item.Quantity, item.Holder, item.Description); err != nil {
 			return err
 		}
 	}

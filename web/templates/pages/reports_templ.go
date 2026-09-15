@@ -64,59 +64,59 @@ func ReportsContent(data view.PageData) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"metric-grid\"><article class=\"metric\"><div class=\"metric-value\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"page-intro\"><div><div class=\"section-kicker\">OPERATIONAL INTELLIGENCE</div><h2>Reports</h2><p class=\"muted\">Server-calculated movement reports scoped to the signed-in role.</p></div><div class=\"page-actions\"><button class=\"btn btn-secondary\" type=\"button\" x-on:click=\"window.print()\">Print report</button><a class=\"btn btn-primary\" href=\"/gate-passes\">Export register</a></div></div><section class=\"stat-grid\"><article class=\"stat-card stat-teal\"><div class=\"stat-value\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(data.Visible))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 14, Col: 107}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 12, Col: 116}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"metric-label\">Visible records</div></article><article class=\"metric\"><div class=\"metric-value\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"stat-label\">Visible records</div><div class=\"stat-note\">Current role scope</div></article><article class=\"stat-card stat-amber\"><div class=\"stat-value\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(data.Pending))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 14, Col: 248}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 12, Col: 314}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"metric-label\">Awaiting approval</div></article><article class=\"metric\"><div class=\"metric-value\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div class=\"stat-label\">Awaiting approval</div><div class=\"stat-note\">Issuing queue</div></article><article class=\"stat-card stat-blue\"><div class=\"stat-value\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(data.PassedOut))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 14, Col: 393}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 12, Col: 510}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><div class=\"metric-label\">Outside gate</div></article><article class=\"metric\"><div class=\"metric-value\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div><div class=\"stat-label\">Outside gate</div><div class=\"stat-note\">Operational movement</div></article><article class=\"stat-card stat-red\"><div class=\"stat-value\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(data.Overdue))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 14, Col: 531}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/pages/reports.templ`, Line: 12, Col: 705}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div class=\"metric-label\">Overdue returns</div></article></section><section class=\"panel\"><div class=\"toolbar\"><div><h2>Operational report</h2><p class=\"panel-note\">This register is calculated on the server and scoped to the signed-in role.</p></div><button class=\"button secondary\" type=\"button\" x-on:click=\"window.print()\">Print report</button></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><div class=\"stat-label\">Overdue returns</div><div class=\"stat-note\">Follow-up required</div></article></section><section class=\"card\"><div class=\"card-heading\"><div><div class=\"section-kicker\">REPORT TYPE</div><h3>Gate-pass movement register</h3></div><select class=\"select\" style=\"width:220px\"><option>Monthly gate-pass report</option><option>Pending-return report</option><option>Overdue-return report</option><option>Item-wise movement report</option><option>Consignee-wise report</option><option>Officer-wise report</option><option>Status-wise report</option></select></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
