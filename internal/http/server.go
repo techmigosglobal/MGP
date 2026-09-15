@@ -360,6 +360,9 @@ func (s *Server) createRevision(w http.ResponseWriter, r *http.Request) {
 	}
 	data := passDataFromRequest(r, view.PageData{Title: "Create revision", Active: "passes", UserName: user.Name, Role: string(user.Role), CSRFToken: session.CSRFToken})
 	original := strings.TrimSpace(r.PathValue("id"))
+	if detail, findErr := s.Passes.FindByID(r.Context(), original); findErr == nil {
+		original = detail.PassNo
+	}
 	draft, err := draftFromForm(data)
 	if err == nil {
 		_, err = s.Passes.CreateRevision(r.Context(), rbac.Actor{ID: user.ID, Role: user.Role}, original, draft)
