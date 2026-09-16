@@ -11,18 +11,21 @@ templ Login(data view.PageData) {
   <link rel="stylesheet" href="/static/css/tailwind.css"/><link rel="stylesheet" href="/static/css/app.css"/>
   <script src="/static/js/htmx.min.js" defer></script><script src="/static/js/alpine.min.js" defer></script><script src="/static/js/app.js" defer></script>
 </head>
-<body class="login-body" x-data="{ submitting: false }">
+<body class="login-body">
   <main class="login-page">
-    <section class="login-hero"><div class="hero-orb"></div><div class="side-kicker">MATERIAL GATE PASS</div><h1>Every pass.<br/><em>Every stage.</em><br/>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p><div class="hero-footer">GO BACKEND · HTMX-FIRST · OFFLINE LAN DEPLOYABLE</div></section>
+    <section class="login-hero"><div class="hero-orb"></div><div class="side-kicker">MATERIAL GATE PASS</div><h1>Every pass.<br/><em>Every stage.</em><br/>Accountable.</h1><p>A controlled workspace for preparation, independent approval, physical pass-out, return, and audit.</p></section>
     <section class="login-panel">
       <div class="login-mark">M</div><div class="section-kicker">SECURE OPERATOR ACCESS</div><h2>Sign in to MGP</h2><p class="muted">Use your local operator username and six-digit PIN.</p>
       if data.Error != "" {
         <div class="alert alert-error" role="alert">{ data.Error }</div>
       }
-      <form method="post" action="/login" x-on:submit="submitting = true">
+      if data.Notice != "" {
+        <div class="toast toast-success" role="status"><span>✓</span><div>{ data.Notice }</div></div>
+      }
+      <form method="post" action="/login">
         <div class="field"><label for="username">Username</label><input id="username" class="input" type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required/></div>
         <div class="field"><label for="pin">6-digit PIN</label><input id="pin" class="input" type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required/></div>
-        <button class="btn btn-primary btn-wide" type="submit" x-bind:disabled="submitting"><span x-show="!submitting">Sign in securely</span><span x-show="submitting" x-cloak>Checking…</span></button>
+        <button class="btn btn-primary btn-wide" type="submit">Sign in securely</button>
       </form>
       if data.TestCredentials {
         @TestCredentials()

@@ -113,7 +113,7 @@ func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
-	render(w, r, pages.Login(view.PageData{Title: "Sign in", Error: r.URL.Query().Get("error"), TestCredentials: s.Config.ShowTestCredentials}))
+	render(w, r, pages.Login(view.PageData{Title: "Sign in", Error: r.URL.Query().Get("error"), Notice: r.URL.Query().Get("notice"), TestCredentials: s.Config.ShowTestCredentials}))
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Sessions.Delete(r.Context(), w, r)
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/login?notice=Signed+out+successfully", http.StatusSeeOther)
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {

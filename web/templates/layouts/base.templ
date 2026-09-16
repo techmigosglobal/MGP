@@ -61,7 +61,7 @@ templ Base(data view.PageData, content templ.Component) {
             <a class="btn btn-primary btn-sm" href="/gate-passes/new">＋ New gate pass</a>
           }
           <div class="operator-card"><div class="operator-avatar">{ operatorInitial(data.UserName) }</div><div><strong>{ data.UserName }</strong><span>{ data.Role }</span></div></div>
-          <form method="post" action="/logout"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out">↪</button></form>
+          <form method="post" action="/logout" hx-boost="false"><input type="hidden" name="csrf_token" value={ data.CSRFToken }/><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out">↪</button></form>
         </div>
       </header>
       <div class="content">
